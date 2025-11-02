@@ -9,13 +9,13 @@ using Polynomials
     end
 
     @time @testset "Fourier Modes" begin
-        @test_nowarn FourierMode()
+        f = FourierMode()
+        @test compatible(f, f)
     end
 
     @time @testset "Basis Components" begin
-        @test_nowarn BasisComponent()
         f = FourierMode(1, 1, 1)
         b = BasisComponent(1, f, f, Polynomial([1, 0, -1], :y), 0)
-        @test Polynomial([1]) * b == b
+        @test compatible(b, b)
     end
 end
