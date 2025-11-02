@@ -1,5 +1,3 @@
-export hookstepsolve 
-
 using LinearAlgebra
 
 function printflush(string)
@@ -302,4 +300,3 @@ function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.1, Nnewton=20
     #return x, Xiterates
     return x, false
 end
-

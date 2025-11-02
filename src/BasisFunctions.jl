@@ -911,7 +911,7 @@ return ±1 for Ψijkl symmetric/antisymmetric under y reflection σy
 function yreflection(ijkl::Vector{Int})
     i,j,k,l = ijkl
     return l%2 == 0 ? 1 : -1
-1end
+end
 
 """
 return ±1 for Ψijkl symmetric/antisymmetric under z translation τz
