@@ -11,10 +11,6 @@ import LinearAlgebra: norm
 import Polynomials: derivative
 import SparseArrays: sparse
 
-include("BasisFunctions.jl")
-
-export FourierMode, BasisComponent, BasisFunction, compatible, isorthogonal, innerproduct, derivative, xderivative, yderivative, zderivative, *, zero, regularize, laplacian, dotgrad, fourierIndices, basisIndexMap, basisIndexMap2, makeBasisSet, estr, Estr, ustr, psistr, legendrePolynomials, xreflection, yreflection, zreflection, xtranslationLx2, ztranslationLz2, vex, norm, norm2, loworder, ijkl2file, save, SparseBilinear, sparse, polyparity
-
 include("Hookstep.jl")
 
 export hookstepsolve 
@@ -23,8 +19,12 @@ include("Symmetries.jl")
 
 export Symmetry, symmetric
 
+include("BasisFunctions.jl")
+
+export FourierMode, BasisComponent, BasisFunction, compatible, isorthogonal, innerproduct, derivative, xderivative, yderivative, zderivative, *, zero, regularize, laplacian, dotgrad, fourierIndices, basisIndices, basisSet, estr, Estr, ustr, psistr, legendrePolynomials, xreflection, yreflection, zreflection, xtranslationLx2, ztranslationLz2, vex, norm, norm2, loworder, ijkl2file, save, SparseBilinear, sparse, polyparity, shearFunction
+
 include("ODEModels.jl")
 
-export makeODEModel, makeShearFunction
+export ODEModel
 
 end # module CloudAtlas

@@ -1,25 +1,13 @@
 """
-   f, Df, Ψ, ijkl = makeODEmodel(α, γ, J,K,L, g::Vector{Symmetry})
+   f, Df = ODEmodel(Ψ)
 
-make an ODE model dx/dt = f(x,R) of plane Couette flow for symmetry subgroup
-<g[1], g[2], ... > discretization limits -J ≤ |j| ≤ J, -K ≤ k ≤ K, and 0 ≤ l ≤ L,
-where j,k are indices of Fourier modes (e.g. cos αjx sin γkz) and l is the index
-for the wall-normal polynomials (l=0 is lowest order, l=L highest order).
+Make an ODE model dx/dt = f(x,R) of plane Couette flow by Galerkin projection
+onto basis set Ψ. 
 
-return functions f(x) and Df(x) (matrix of partial derivatives), basis set Ψ,
-and ijkl indices for the basis set.
+Return functions f(x,R) and Df(x,R) (the matrix of partial derivatives of f). 
 """
-function makeODEModel(α, γ, J,K,L, g::Vector{Symmetry})
+function ODEModel(Ψ)
     
-    # make a complete basis up to J,K,L discretization level
-    ijklfull = basisIndexMap(J,K,L)
-    Ψfull = makeBasisSet(α, γ, ijklfull, normalize=false);
-    
-    # select the subset of those that are symmetric with all generators g[n]
-    nsymm = findall([symmetric(ijklfull[n,:], g) for n in 1:size(ijklfull,1)])
-    Ψ = Ψfull[nsymm]
-    ijkl = ijklfull[nsymm,:]
-
     Nmodes = length(Ψ)
     y = Polynomial([0.0;1.0], :y)
 
@@ -61,7 +49,6 @@ function makeODEModel(α, γ, J,K,L, g::Vector{Symmetry})
     f(x,R)  = BfLU\(A12f*x + (1/R)*(A3f*x) + Nf(x))
     Df(x,R) = BfLU\(A12f + (1/R)*(A3f) + derivative(Nf,x))
     
-    f, Df, Ψ, ijkl # return functions f(x,R) and Df(x,R)
+    f, Df # return functions f(x,R) and Df(x,R)
 end
 
-makeODEModel(α, γ, J,K,L) = makeODEmodel(α,γ,J,K,L, fill(Symmetry(), 0))

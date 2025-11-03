@@ -530,10 +530,17 @@ function fourierIndices(J)
 end
 
 """
-make an N x 4 matrix of integers n2ijkl whose nth row is 4-vector containing indices i, j, k, l,
-the allowed values of j,k,l depend on i (because of the way zero divergence and wall BCs work)
+    basisIndices(J::Int, K::Int, L::Int)
+    basisIndices(J::Int, K::Int, L::Int, H::Vector{Symmetries})
+
+Return the set of i,j,k,l basis set indices for J,K,L discretization limits with -J ≤ j ≤ J,
+-K ≤ k ≤ K, and 0 ≤ l ≤ L, and 1 ≤ i ≤ 6. The allowed values of j,k,l depend on i. Return
+value is an N x 4 matrix each row of which specifies an i,j,k,l index for a basis element.
+
+If symmetry subgroup H is specified, filter the set of indices to include only those that
+are symmetric in all the symmetries in H. (H should be a vector of generators for the group).
 """
-function basisIndexMap(J::Int, K::Int, L::Int)
+function basisIndices(J::Int, K::Int, L::Int)
     N = (2J+1)*(2K+1)*(2L+1) + 1
     ijkl = fill(0, (N,4))
     Jset = fourierIndices(J)
@@ -610,6 +617,16 @@ function basisIndexMap(J::Int, K::Int, L::Int)
     ijkl
 end
 
+function basisIndices(J::Int, K::Int, L::Int, H::Vector{Symmetry}) 
+    # make full set of indices with no symmetry restrictions
+    ijklfull = basisIndices(J,K,L)
+
+    # get indices of all basis elements that are symmetric in all generators
+    nsymm = findall([symmetric(ijklfull[n,:], H) for n in 1:size(ijklfull,1)])
+
+    ijklfull[nsymm, :]
+end
+
 
 """
 return OffSetArray of Legendre polynomials P_n(y) for n=0 to K
@@ -628,18 +645,17 @@ function legendrePolynomials(L::Int, symbol=:y)
 end
 
 
-#function makeBasisSet(α::Real, γ::Real, J::Int, K::Int, L::Int)
 """
 make a set of basis functions Ψijkl, return as an array of BasisFunctions
    α,γ == Fourier wavenumbers 2π/Lx, 2π/Lz, 
    basis functions are all zero divergence, div Psi = 0, and zero at walls, Psi(x,±1,z) = 0.
    set definition is complicated, see LaTeX documentation elsewhere...
 """
-function makeBasisSet(α::Real, γ::Real, n2ijkl::Matrix{Int}; normalize=false)
-    N = size(n2ijkl, 1)
-    J = maximum(abs.(n2ijkl[:,2]))
-    K = maximum(abs.(n2ijkl[:,3]))
-    L = maximum(n2ijkl[:,4])
+function basisSet(α::Real, γ::Real, ijkl::Matrix{Int}; normalize=false)
+    N = size(ijkl, 1)
+    J = maximum(abs.(ijkl[:,2]))
+    K = maximum(abs.(ijkl[:,3]))
+    L = maximum(ijkl[:,4])
 
     smasher = Polynomial([1; 0.0; -1], :y)  # smasher  =  1-y^2
     smasher2 = smasher*smasher            # smasher2 = (1-y^2)^2
@@ -649,20 +665,6 @@ function makeBasisSet(α::Real, γ::Real, n2ijkl::Matrix{Int}; normalize=false)
     S = OffsetVector([S0; smasher2.*P[0:L-1]], -1) # l = 1:L, even/odd with l+1
     Sprime = derivative.(S)                        # l = 0:L, even/odd with l
 
-    #for n=0:L
-    #println("P$n(y) = $(P[n])")
-    #end
-
-    #for n=0:L
-    #println("S$n(y) = $(S[n])")
-    #end
-
-    #for n=0:L
-    #println("S'$n(y) = $(Sprime[n])")
-    #end
-
-    #Ejx = OffsetVector([FourierMode(1, j, α) for j in -J:J], -(J+1))
-    #Ekz = OffsetVector([FourierMode(1, k, γ) for k in -K:K], -(K+1))
     Ejx = OffsetVector([FourierMode(j, α) for j in -J:J], -(J+1))
     Ekz = OffsetVector([FourierMode(k, γ) for k in -K:K], -(K+1))
 
@@ -673,7 +675,7 @@ function makeBasisSet(α::Real, γ::Real, n2ijkl::Matrix{Int}; normalize=false)
 
     Ψ = fill(BasisFunction(), N)
     for n=1:N
-        i,j,k,l = n2ijkl[n,:]
+        i,j,k,l = ijkl[n,:]
         if i==1
             Ψu = BasisComponent(1, Ejx[0], Ekz[k], Sprime[l], parity(l))
             Ψ[n] = BasisFunction(Ψu, zerocomp, zerocomp)
@@ -717,39 +719,10 @@ make a set of basis functions Ψijkl
             (j,k, are x,z Fourier indices, l is y polynomial index, i is 1 through 6 for diff forms of Ψ
    basis functions are all zero divergence, div Psi = 0, and zero at walls, Psi(x,±1,z) = 0.
 """
-function makeBasisSet(α::Real, γ::Real, J::Int, K::Int, L::Int; normalize=false)
-    ijkl = basisIndexMap(J,K,L)
-    Ψ = makeBasisSet(α, γ, ijkl, normalize=normalize)
+function basisSet(α::Real, γ::Real, J::Int, K::Int, L::Int; normalize=false)
+    ijkl = basisIndices(J,K,L)
+    Ψ = basisSet(α, γ, ijkl, normalize=normalize)
 end
-#=
-"""
-make a set of basis functions Ψijkl 
-   α,γ == Fourier wavenumbers 2π/Lx, 2π/Lz, 
-   J,K,L == discretization limits: -J ≤ j ≤ J, -K ≤ k ≤ K, 0 ≤ l ≤ L.
-            (j,k, are x,z Fourier indices, l is y polynomial index, i is 1 through 6 for diff forms of Ψ
-   symmetries == vector of symmetry symbols, e.g. [:sx; :sztxz] choices for elements are 
-                 :sx, :sy, :sz, :sxy, :syz, :sxz, 
-   basis functions are all zero divergence, div Psi = 0, and zero at walls, Psi(x,±1,z) = 0.
-"""
-function makeBasisSet(α::Real, γ::Real, J::Int, K::Int, L::Int, symmetries, normalize=false)
-    ijklfull = basisIndexMap(J,K,L)
-    Ψfull = makeBasisSet(α, γ, ijklfull, normalize=normalize)
-    Nfull = lemgth(Ψfull)
-    
-    sx = xreflection(ijklfull)
-    sy = yreflection(ijklfull)
-    sz = zreflection(ijklfull)
-    tx = xtranslationLx2(ijklfull)
-    tz = ztranslationLz2(ijklfull)
-
-    # convert symbolic symmetries to vectors of +/-1 indicating symmetry/antisymmetry. So HACKY!!!
-    symm = fill([0], Nmodes)
-    for n = 1:length(symmetries)
-        if symmetries[i] = :sx
-            symm[i] = 
-end
-=#
-
 
 m2xyz(m) = m==1 ? "x" : (m==2 ? "y" : "z") # produce string x,y, or z from integer index m 
 m2αγ(m)  = m==1 ? "α" : "γ"                # produce string α or γ from integer index m 
@@ -954,12 +927,12 @@ end
 foo() = "foo!"
 
 
-xreflection(n2ijkl::Matrix{Int}) =  [xreflection(n2ijkl[n,:]) for n=1:size(n2ijkl,1)]
-yreflection(n2ijkl::Matrix{Int}) =  [yreflection(n2ijkl[n,:]) for n=1:size(n2ijkl,1)]
-zreflection(n2ijkl::Matrix{Int}) =  [zreflection(n2ijkl[n,:]) for n=1:size(n2ijkl,1)]
-xtranslationLx2(n2ijkl::Matrix{Int}) =  [xtranslationLx2(n2ijkl[n,:]) for n=1:size(n2ijkl,1)]
-ztranslationLz2(n2ijkl::Matrix{Int}) =  [ztranslationLz2(n2ijkl[n,:]) for n=1:size(n2ijkl,1)]
-loworder(n2ijkl::Matrix{Int}, JKL::Vector{Int}) = [loworder(n2ijkl[n,:], JKL) for n=1:size(n2ijkl,1)]
+xreflection(ijkl::Matrix{Int}) =  [xreflection(ijkl[n,:]) for n=1:size(ijkl,1)]
+yreflection(ijkl::Matrix{Int}) =  [yreflection(ijkl[n,:]) for n=1:size(ijkl,1)]
+zreflection(ijkl::Matrix{Int}) =  [zreflection(ijkl[n,:]) for n=1:size(ijkl,1)]
+xtranslationLx2(ijkl::Matrix{Int}) =  [xtranslationLx2(ijkl[n,:]) for n=1:size(ijkl,1)]
+ztranslationLz2(ijkl::Matrix{Int}) =  [ztranslationLz2(ijkl[n,:]) for n=1:size(ijkl,1)]
+loworder(ijkl::Matrix{Int}, JKL::Vector{Int}) = [loworder(ijkl[n,:], JKL) for n=1:size(ijkl,1)]
 
 # TODO: This is "type piracy" and should be revised
 # (https://docs.julialang.org/en/v1/manual/style-guide/#avoid-type-piracy)
@@ -1022,11 +995,11 @@ function save(A::SparseMatrixCSC, filebase)
 end
 
 """
-    shear(x) = makeShearFunction(Ψ)
+    shear(x) = shearFunction(Ψ)
 
 return a function shear(x) that computes the wall shear rate of u = sum x[i] Ψ[i]
 """
-function makeShearFunction(Ψ)
+function shearFunction(Ψ)
     # Produce vector shearΨ for evaluating dissipation from x values:
     N = length(Ψ)
     println("Building shear(x)...")
