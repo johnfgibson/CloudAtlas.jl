@@ -963,14 +963,14 @@ loworder(n2ijkl::Matrix{Int}, JKL::Vector{Int}) = [loworder(n2ijkl[n,:], JKL) fo
 
 # TODO: This is "type piracy" and should be revised
 # (https://docs.julialang.org/en/v1/manual/style-guide/#avoid-type-piracy)
-intersect(u::Vector, v::Vector) = sort(collect(intersect(Set(u), Set(v))))
-intersect(u::Vector, v::Vector, w::Vector) = sort(collect(intersect(Set(u), Set(v), Set(w))))
-intersect(u::Vector, v::Vector, w::Vector, x::Vector) = sort(collect(intersect(Set(u), Set(v), Set(w), Set(x))))
+#intersect(u::Vector, v::Vector) = sort(collect(intersect(Set(u), Set(v))))
+#intersect(u::Vector, v::Vector, w::Vector) = sort(collect(intersect(Set(u), Set(v), Set(w))))
+#intersect(u::Vector, v::Vector, w::Vector, x::Vector) = sort(collect(intersect(Set(u), Set(v), Set(w), Set(x))))
 
-findsymmetric(h) = findall(x -> x==1, h) # select indices n s.t. h psi[n] = 1 psi[n]
-findsymmetric(h1, h2) = intersect(findsymmetric(h1), findsymmetric(h2))
-findsymmetric(h1, h2, h3) = intersect(findsymmetric(h1), findsymmetric(h2), findsymmetric(h3))
-findsymmetric(h1, h2, h3, h4) = intersect(findsymmetric(h1), findsymmetric(h2), findsymmetric(h3), findsymmetric(h4))
+#findsymmetric(h) = findall(x -> x==1, h) # select indices n s.t. h psi[n] = 1 psi[n]
+#findsymmetric(h1, h2) = intersect(findsymmetric(h1), findsymmetric(h2))
+#findsymmetric(h1, h2, h3) = intersect(findsymmetric(h1), findsymmetric(h2), findsymmetric(h3))
+#findsymmetric(h1, h2, h3, h4) = intersect(findsymmetric(h1), findsymmetric(h2), findsymmetric(h3), findsymmetric(h4))
 
 function ijkl2file(ijkl, filebase)
     filename = occursin(".asc", filebase) ? filebase : filebase * ".asc"
@@ -1020,6 +1020,26 @@ function save(A::SparseMatrixCSC, filebase)
     end
     close(io)
 end
+
+"""
+    shear(x) = makeShearFunction(Ψ)
+
+return a function shear(x) that computes the wall shear rate of u = sum x[i] Ψ[i]
+"""
+function makeShearFunction(Ψ)
+    # Produce vector shearΨ for evaluating dissipation from x values:
+    N = length(Ψ)
+    println("Building shear(x)...")
+    shearΨ = fill(0.0, N)
+    for i=1:N    
+        if Ψ[i].u[1].ejx.waveindex == 0 && Ψ[i].u[1].ekz.waveindex == 0
+            dΨudy = yderivative(Ψ[i].u[1])
+            shearΨ[i] = Ψ[i].u[1].coeff*(dΨudy.p(1.0)  + dΨudy.p(-1.0))/2
+        end
+    end
+    shear(x) = dot(shearΨ, x) + 1.0
+end
+
 
 # ====================================================================================
 # functions for generating symmetric basis sets and ODE models

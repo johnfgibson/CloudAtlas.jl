@@ -102,7 +102,7 @@ hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity
     return value x is the solution, success is a boolean flag indicating success (convergence) or failure (local minimum)
 """
 
-function hookstepsolve(f, xguess; ftol=1e-08, xtol=1e-08, δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0)
+function hookstepsolve(f, xguess; ftol=1e-08, xtol=1e-08, δ=0.02, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0)
     hookstepsolve(f, x -> Df_finitediff(f,x), xguess, ftol=ftol, xtol=xtol, δ=δ, Nnewton=Nnewton,
                   Nhook=Nhook, Nmusearch=Nmusearch, verbosity=verbosity)
 end
@@ -119,7 +119,7 @@ hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity
     Nmusearch is the maximum number of iterations to find a hookstep with length equal to δ
     verbosity == 0,1,2 gives none, terse, and verbose diagnostic printouts
 """
-function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0)
+function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.02, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0)
 
     δmax = 1
     δmin = 0.001
@@ -137,10 +137,9 @@ function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.1, Nnewton=20
         verbosity > 2 && printflush("x = $x")
         
         # start Newton step from best computed values over all previous computations
-        verbosity > 0 && print("evaluating f(x)...")
+        verbosity > 0 && println("evaluating f(x)...")
         fx = f(x)
         rx = 1/2*norm2(fx)
-        verbosity > 0 && printflush("norm(fx) = $(sqrt(2rx))")
 
         if sqrt(2rx) <= ftol
             verbosity > 0 && printflush("stopping and exiting search since norm(f(x)) = $(norm(fx)) ≤ $ftol = ftol.")
@@ -151,11 +150,11 @@ function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.1, Nnewton=20
         end
         
         # compute Newton step Δx
-        verbosity > 1 && printflush("computing Df(x)...")
+        verbosity > 0 && printflush("computing Df(x)...")
         Dfx = Df(x)
-        verbosity > 1 && printflush("solving Df(x) Δx = -f(x)...")
+        verbosity > 0 && printflush("solving Df(x) Δx = -f(x)...")
         Δx = -Dfx\fx
-        verbosity > 1 && printflush("mopping up Δx solve...")
+        #verbosity > 0 && printflush("mopping up Δx solve...")
         norm_Δx = norm(Δx)
         DfΔx_newt= Dfx*Δx
 
@@ -192,8 +191,9 @@ function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.1, Nnewton=20
         norm_Δx_newt = norm_Δx 
         x_hook = x + Δx        # Declare x_hook, modify it iteratively in hookstep loop.
 
+        verbosity > 0 && printflush("Starting trust region evaluation, trust region radius δ = $δ...")
         for h in 1:Nhook
-            verbosity > 1 && printflush("\nHookstep $(h): finding hookstep Δx s.t. |Δx| = δ = $δ")
+            verbosity > 0 && printflush("Hookstep $(h): finding hookstep Δx s.t. |Δx| = δ = $δ")
             Δx = hookstep(fx, Dfx, δ, Δx_newt, Nmusearch=Nmusearch, verbosity=verbosity-1)
             verbosity > 1 && printflush("Found hookstep Δx s.t. |Δx| = δ = $δ")
 
@@ -210,7 +210,7 @@ function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.1, Nnewton=20
                         
             newton_step_within_delta = norm_Δx_newt <= δ ? true : false
 
-            verbosity > 1 && printflush("Assessing Δx...")
+            verbosity > 0 && print("Assessing Δx...")
             # Compute actual (squared) residual of hookstep and linear & quadratic estimates based purely
             # on Δx and evaluations of f(x) and Df(x) at current Newton step. These derive from 
             # r(x + Δx) = 1/2 ||f(x+Δx)||^2
@@ -241,21 +241,21 @@ function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.1, Nnewton=20
             if Δr_hook > Δr_linear                # actual is better than linear estimate (quadratic helps!)
                 verbosity > 0 && print("negative curvature, ")
                 if newton_step_within_delta
-                    verbosity > 1 && printflush("but newton step is within trust region")
-                    verbosity > 1 && printflush("so don't increase δ, and go to next Newton step")
+                    verbosity > 0 && printflush("but newton step is within trust region")
+                    verbosity > 0 && printflush("so don't increase δ, and go to next Newton step")
                     break
                 else
-                    verbosity > 1 && printflush("and newton step is outside trust region")
-                    verbosity > 1 && printflush("so increase δ = $δ - > 3δ/2 = $(3δ/2) and recompute hookstep")
+                    verbosity > 0 && printflush("and newton step is outside trust region")
+                    verbosity > 0 && printflush("so increase δ = $δ - > 3δ/2 = $(3δ/2) and recompute hookstep")
                     δ = 3δ/2           
                     continue
                 end
             elseif Δr_hook < 0.01 * Δr_quadratic
-                verbosity > 1 && printflush("poor improvement, decreasing δ  = $δ -> δ/2 = $(δ/2) and recomputing hookstep") 
+                verbosity > 0 && printflush("poor improvement, decreasing δ  = $δ -> δ/2 = $(δ/2) and recomputing hookstep") 
                 δ = δ/2                            # actual is vastly worse than quadratic estimate
                 continue                           # reduce trust region  and recompute hookstep
             elseif Δr_hook < 0.10 * Δr_quadratic
-                verbosity > 1 && printflush("marginal improvement, decreasing δ  = $δ -> δ/2 = $(δ/2) and continuing to next Newtown step")
+                verbosity > 0 && printflush("marginal improvement, decreasing δ  = $δ -> δ/2 = $(δ/2) and continuing to next Newtown step")
                 δ = δ/2                            # actual is worse than quadratic estimate
                 break                              # reduce trust region and go to next Newton step
             elseif 0.8*Δr_quadratic < Δr_hook < 2* Δr_quadratic   
@@ -264,29 +264,30 @@ function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.1, Nnewton=20
                 rprime = Δr_linear/δ
                 rprime2 = 2*(r_hook - rx - rprime*δ)/δ^2 
                 δnew = -rprime/rprime2
-                verbosity > 1 && printflush("accurate improvement, considering δ  = $δ -> δnew = $(δnew) from quadratic model")
+                verbosity > 0 && printflush("accurate improvement, considering δ  = $δ -> δnew = $(δnew) from quadratic model")
                                       
                 if newton_step_within_delta
-                    verbosity > 1 && printflush("but Newton step is within trust region, so don't change δ, and go to next Newton step")
+                    verbosity > 0 && printflush("but Newton step is within trust region, so don't change δ, and go to next Newton step")
                 elseif δnew < 2δ/3
-                    verbosity > 1 && printflush("too much decrease, changing δ = $δ -> 2δ/3 = $(2δ/3) and continuing to next Newtown step")
+                    verbosity > 0 && printflush("too much decrease, changing δ = $δ -> 2δ/3 = $(2δ/3) and continuing to next Newtown step")
                     δ = 2δ/3
                 elseif δnew > 4δ/3    
-                    verbosity > 1 && printflush("too much increase, changing δ = $δ -> 4δ/3 = $(4δ/3) and continuing to next Newtown step")
+                    verbosity > 0 && printflush("too much increase, changing δ = $δ -> 4δ/3 = $(4δ/3) and continuing to next Newtown step")
                     δ = 4δ/3
                 else
-                    verbosity > 1 && printflush("not too much change, changing δ = $δ -> δnew = $δnew and continuing to next Newtown step")
+                    verbosity > 0 && printflush("not too much change, changing δ = $δ -> δnew = $δnew and continuing to next Newtown step")
                     δ = δnew
                 end
                 break
             else 
-                verbosity > 1 && printflush("good improvement, keeping δ = $(δ) and continuing to next Newtown step")
+                verbosity > 0 && printflush("good improvement, keeping δ = $(δ) and continuing to next Newtown step")
                 break                              # hookstep is decent enough, don't adjust, go to next Newton               
             end
                     
         end
         
-        verbosity > 1 && printflush("Finished with hookstep computations. Resetting x to x_hook")
+        verbosity > 0 && printflush("Finished trust region evaluation, trust region radius δ = $δ...")
+        verbosity > 0 && printflush("norm(Δx hook) = $(norm(x - x_hook))")
         verbosity > 2 && printflush("prior x == $x")
         x = x_hook
         verbosity > 2 && printflush("  new x == $x == x_hook")
