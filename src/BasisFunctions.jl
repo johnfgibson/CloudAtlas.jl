@@ -1,11 +1,3 @@
-export FourierMode, BasisComponent, BasisFunction, compatible, isorthogonal, innerproduct, derivative, xderivative, yderivative, zderivative, *, zero, regularize, laplacian, dotgrad, fourierIndices, basisIndexMap, basisIndexMap2, makeBasisSet, estr, Estr, ustr, psistr, legendrePolynomials, xreflection, yreflection, zreflection, xtranslationLx2, ztranslationLz2, intersect, findsymmetric, vex, norm, norm2, loworder, ijkl2file, save, SparseBilinear, sparse
-
-using Polynomials, StaticArrays, OffsetArrays, LinearAlgebra, SparseArrays, StringBuilders
-import Base: *, -, zero, intersect
-import LinearAlgebra: norm
-import Polynomials: derivative
-import SparseArrays: sparse
-
 # divide(x::Int, y::Int) = x//y
 # divide(x::Int, y::Rational) = x//y
 # divide(x::Int, y::AbstractFloatRational) = x//y
@@ -969,6 +961,8 @@ xtranslationLx2(n2ijkl::Matrix{Int}) =  [xtranslationLx2(n2ijkl[n,:]) for n=1:si
 ztranslationLz2(n2ijkl::Matrix{Int}) =  [ztranslationLz2(n2ijkl[n,:]) for n=1:size(n2ijkl,1)]
 loworder(n2ijkl::Matrix{Int}, JKL::Vector{Int}) = [loworder(n2ijkl[n,:], JKL) for n=1:size(n2ijkl,1)]
 
+# TODO: This is "type piracy" and should be revised
+# (https://docs.julialang.org/en/v1/manual/style-guide/#avoid-type-piracy)
 intersect(u::Vector, v::Vector) = sort(collect(intersect(Set(u), Set(v))))
 intersect(u::Vector, v::Vector, w::Vector) = sort(collect(intersect(Set(u), Set(v), Set(w))))
 intersect(u::Vector, v::Vector, w::Vector, x::Vector) = sort(collect(intersect(Set(u), Set(v), Set(w), Set(x))))

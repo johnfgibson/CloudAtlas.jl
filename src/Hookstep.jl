@@ -1,5 +1,3 @@
-using LinearAlgebra
-
 function printflush(string)
     println(string)
     flush(stdout)
