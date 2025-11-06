@@ -22,6 +22,8 @@ end
 
 
 """
+    FourierMode{T<:Real}
+
 FourierMode represents a cos, sin or const function of form c * {cos(ajx) | 1 | sin(ajx)}.
 Which of cos(ajx), 1, sin(ajx) a given FourierMode represents is determined by the index j
  
@@ -31,10 +33,18 @@ Which of cos(ajx), 1, sin(ajx) a given FourierMode represents is determined by t
 
 The x and z are implicit; FourierModes are functions, don't know names of their operands
 """
-struct FourierMode{T}
+struct FourierMode{T<:Real}
     coeff::T          # multiplicative coefficient
     waveindex::Int    # j of cos(ajx), and j<0 => cos(ajx), j=0 => 1, j>0 => sin(ajx)
     wavenumber::T     # alpha of cos(ajx), sin(ajx) or gamma of cos(gjx), sin(gjx)
+    function FourierMode(coeff::TC, waveindex::Integer, wavenumber::TW) where {TC<:Real, TW<:Real}
+        T = promote_type(TC, TW)
+        return new{T}(
+            T(coeff),
+            waveindex,
+            T(wavenumber)
+        )
+    end
 end
 
 # needed operations
@@ -48,7 +58,8 @@ end
 
 # zero(ej::FourierMode) = FourierMode(0, 0, ej.wavenumber)
 
-FourierMode() = FourierMode(0,0,0)
+FourierMode{T}() where {T<:Real} = FourierMode(zero(T),0,zero(T))
+FourierMode() = FourierMode{Float64}()
 FourierMode(j, α) = FourierMode(one(α),j,α)
 
 function (f::FourierMode)(x::Real) 
@@ -70,17 +81,17 @@ compatible(ej::FourierMode, ek::FourierMode) = ej.wavenumber == ek.wavenumber
 isorthogonal(ej::FourierMode, ek::FourierMode) = ej.waveindex != ek.waveindex 
 
 # 1/Lx integral_0^Lx ej(x) ek(x) dx == 0 for j!=k, 1 for j=k=0, 1/2 for j=k!=0 (times coeffs)
-function innerproduct(ej::FourierMode{T}, ek::FourierMode{T}) where T
+function innerproduct(ej::FourierMode{T}, ek::FourierMode{T}) where {T<:Real}
     compatible(ej,ek) || error("incompatible ej=$(ej), ek=$(ek)")
     
     if isorthogonal(ej,ek) || ej.coeff == zero(T) || ek.coeff == zero(T) 
-        return zero(ej.coeff*ek.coeff)
+        return zero(T)
 
     elseif ej.waveindex == 0             # ek.waveindex == 0 as well, since ej, ek are nonorthogonal
         return ej.coeff*ek.coeff         # 1/Lx integral_0^Lx 1 dx = 1
 
     else
-        return 1//2*ej.coeff*ek.coeff    # 1/Lx integral_0^Lx cos^2(ajx) dx = 1/Lx integral_0^Lx sin^2(ajx) dx = 1/2
+        return one(T)/2*ej.coeff*ek.coeff    # 1/Lx integral_0^Lx cos^2(ajx) dx = 1/Lx integral_0^Lx sin^2(ajx) dx = 1/2
     end
 end
 
@@ -116,7 +127,7 @@ end
 # multiplication of ej*ek = {cos(ajx) | 1 | sin(ajx)} * {cos(akx) | 1 | sin(akx)}
 # via trig identities, e.g. cos(ajx)*cos(akx) = 1/2 cos(a(j-k)x) + 1/2 cos(a(j+k)x)
 # return an array of FourierModes since some products have 1 term, some have 2. 
-function *(ej::FourierMode{T}, ek::FourierMode{T}) where T
+function *(ej::FourierMode{T}, ek::FourierMode{T}) where {T<:Real}
     !compatible(ej,ek) && error("incompatible ej, ek")
 
     # convenience precalculations, not used in all cases 
@@ -125,7 +136,7 @@ function *(ej::FourierMode{T}, ek::FourierMode{T}) where T
     k = ek.waveindex
     a = ej.wavenumber
     c = ej.coeff*ek.coeff
-    c2 = 1//2*c
+    c2 = T(c) / 2
 
     jksum =  abs(j) + abs(k)           # |j| + |k|
     jkdiff = abs(abs(j) - abs(k))      # ||j| - |k||
@@ -199,24 +210,52 @@ end
 
 ############################################################################
 """
+    BasisComponent{T<:Real}
+
 BasisComponent represents a function of (x,y,z) that is Fourier in x,z and polynomial in y.
 E.g. f(x,y,z) = c * E_j(x) * E_l(z) * P(y) for a real coefficient c, two Fourier modes E_j(x), E_l(z),
 and a wall-normal polynomial p(y)
 """
-struct BasisComponent
-    coeff::Float64         # multiplicative coefficient
-    ejx::FourierMode    # represents cos(ajx), 1, or sin(ajx)
-    ekz::FourierMode    # represents cos(glz), 1, or sin(glz)
-    p::Polynomial{Float64, :y}  # polynomial p(y) for wall-normal variation (rational coeffs)
+struct BasisComponent{T<:Real}
+    coeff::T
+    ejx::FourierMode{T}    # represents cos(ajx), 1, or sin(ajx)
+    ekz::FourierMode{T}    # represents cos(glz), 1, or sin(glz)
+    p::Polynomial{T, :y}  # polynomial p(y) for wall-normal variation (rational coeffs)
     pparity::Int64      # parity of polynomial P(y): p==1 even, p==-1 odd, p==0 neither
+    function BasisComponent(
+        coeff::TC,
+        ejx::FourierMode{TX},
+        ekz::FourierMode{TZ},  
+        p::Polynomial{TP, :y}, 
+        pparity::Integer
+    ) where {TC<:Real, TX<:Real, TZ<:Real, TP<:Real}
+        T = promote_type(TC, TX, TZ, TP)
+        return new{T}(
+            T(coeff),
+            FourierMode(
+                T(ejx.coeff),
+                ejx.waveindex,
+                T(ejx.wavenumber)
+            ),
+            FourierMode(
+                T(ekz.coeff),
+                ekz.waveindex,
+                T(ekz.wavenumber)
+            ),
+            Polynomial{T, :y}(p),
+            Int64(pparity)
+        )
+    end
 end
 
-BasisComponent() = BasisComponent(0, FourierMode(), FourierMode(), Polynomial(0.0, :y), 0) 
+BasisComponent{T}() where {T<:Real} = BasisComponent(zero(T), FourierMode{T}(), FourierMode{T}(), Polynomial(zero(T), :y), 0) 
+BasisComponent() = BasisComponent{Float64}()
 
 (f::BasisComponent)(x::Real, y::Real, z::Real) = f.coeff * f.ejx(x) * f.ekz(z) * f.p(y)
 (f::BasisComponent)(x::Vector) = f.coeff * f.ejx(x[1]) * f.ekz(x[3]) * f.p(x[2])
 
-zero(f::BasisComponent) = zero(f.coeff)*zero(ejx.coeff)*zero(ekz.coeff)*zero(eltype(f.p.coeffs))
+zero(f::BasisComponent{T}) where {T<:Real} = zero(T)
+zero(::Type{BasisComponent{T}}) where {T<:Real} = zero(T)
 
 compatible(f::BasisComponent, g::BasisComponent) = compatible(f.ejx, g.ejx) && compatible(f.ekz, g.ekz)
 
@@ -233,23 +272,23 @@ isorthogonal(f::BasisComponent, g::BasisComponent) = isorthogonal(f.ejx, g.ejx) 
 
 # (f,g) = (f.c*g.c) (f.ej(x), g.ej(x)) * (1/Ly int_-1^1 f.p(y) g.p(y) dy) * (f.ek(z), g.ek(z))
 
-function innerproduct(f::Polynomial, g::Polynomial, fparity=0, gparity=0)
+function innerproduct(f::Polynomial{T}, g::Polynomial{T}, fparity=0, gparity=0) where {T<:Real}
     if fparity*gparity == -1
-        return 0//1 * zero(eltype(f.coeffs)) * zero(eltype(g.coeffs))
+        return zero(T)
     end
 
     fgintegral = integrate(f*g)
-    1//2*(fgintegral(1) - fgintegral(-1))
+    return T(fgintegral(1) - fgintegral(-1)) / 2
 end
 
 norm2(f::Polynomial) = innerproduct(f,f)
 norm(f::Polynomial) = sqrt(norm2(f))
 
-function innerproduct(f::BasisComponent, g::BasisComponent)
+function innerproduct(f::BasisComponent{T}, g::BasisComponent{T}) where {T<:Real}
     compatible(f,g) || error("incompatible f,g")
 
     if isorthogonal(f,g) || f.coeff == 0 || g.coeff == 0 || f.pparity*g.pparity == -1
-        return zero(f.coeff)*zero(g.coeff)*zero(eltype(f.p.coeffs))*zero(eltype(g.p.coeffs))
+        return zero(T)
     end
     
     return f.coeff*g.coeff * innerproduct(f.ejx, g.ejx) * innerproduct(f.ekz,g.ekz) * innerproduct(f.p, g.p) 
@@ -312,30 +351,32 @@ function *(f::BasisComponent, g::BasisComponent)
     rtn
 end
 
-function innerproduct(f::BasisComponent, g::Vector{BasisComponent}) 
-    ip = 0//1 * zero(f.coeff) * zero(eltype(f.p)) * zero(eltype(g.p))
-    for n = 1:length(g)
-        ip += innerproduct(f, g[n])
+function innerproduct(f::BasisComponent{T}, g::AbstractVector{BasisComponent{T}}) where {T<:Real}
+    ip = zero(T)
+    for gi in g
+        ip += innerproduct(f, gi)
     end
-    ip
+    return ip
+        
 end
 
-function (f::Vector{BasisComponent})(x::Real, y::Real, z::Real)
-    rtn = 0 # not type stable
-    for i in 1:length(f)
-        rtn += f[i](x,y,z)
+function (f::Vector{BasisComponent{T}})(x::Real, y::Real, z::Real) where {T<:Real}
+    rtn = zero(T)
+    for fi in f
+        rtn += fi(x, y, z)
     end
-    rtn
+    return rtn
 end
 
 
 ############################################################################
 
-struct BasisFunction
-    u::SVector{3,BasisComponent}
+struct BasisFunction{T<:Real}
+    u::SVector{3,BasisComponent{T}}
 end
 
-BasisFunction() = BasisFunction(SVector(BasisComponent(), BasisComponent(), BasisComponent()))
+BasisFunction{T}() where {T<:Real} = BasisFunction(SVector(BasisComponent{T}(), BasisComponent{T}(), BasisComponent{T}()))
+BasisFunction() = BasisFunction{Float64}()
 
 BasisFunction(u::BasisComponent, v::BasisComponent, w::BasisComponent) = BasisFunction(SVector(u, v, w))
 
@@ -383,10 +424,10 @@ end
 """
 For psi = [u,v,w], return [v,0,0]
 """
-function vex(psi::BasisFunction)
+function vex(psi::BasisFunction{T}) where {T<:Real}
     u = BasisComponent(psi.u[2].coeff, psi.u[2].ejx, psi.u[2].ekz, psi.u[2].p, psi.u[2].pparity)
-    v = BasisComponent(0, psi.u[2].ejx, psi.u[2].ekz, Polynomial(0.0, :y), 0)
-    w = BasisComponent(0, psi.u[3].ejx, psi.u[3].ekz, Polynomial(0.0, :y), 0)
+    v = BasisComponent(zero(T), psi.u[2].ejx, psi.u[2].ekz, Polynomial(zero(T), :y), 0)
+    w = BasisComponent(zero(T), psi.u[3].ejx, psi.u[3].ekz, Polynomial(zero(T), :y), 0)
     BasisFunction(u,v,w)
 end
 
@@ -396,8 +437,8 @@ end
 # fdotgradg[2] = vector of BasisComponents representing sum ejx ekz p(y) for v component
 # fdotgradg[3] = vector of BasisComponents representing sum ejx ekz p(y) for w component
 
-function dotgrad(f::BasisFunction, g::BasisFunction) 
-    rtn = Vector{Vector{BasisComponent}}(undef, 3)    
+function dotgrad(f::BasisFunction{T}, g::BasisFunction{T}) where {T<:Real}
+    rtn = Vector{Vector{BasisComponent{T}}}(undef, 3)    
     rtn[1] = [f.u[1]*xderivative(g.u[1]); f.u[2]*yderivative(g.u[1]); f.u[3]*zderivative(g.u[1])]
     rtn[2] = [f.u[1]*xderivative(g.u[2]); f.u[2]*yderivative(g.u[2]); f.u[3]*zderivative(g.u[2])]
     rtn[3] = [f.u[1]*xderivative(g.u[3]); f.u[2]*yderivative(g.u[3]); f.u[3]*zderivative(g.u[3])]
@@ -405,8 +446,10 @@ function dotgrad(f::BasisFunction, g::BasisFunction)
     rtn
 end
 
-function innerproduct(f::BasisFunction, g::Vector{Vector{BasisComponent}})
-    s = 0//1
+function innerproduct(
+    f::BasisFunction{T}, 
+    g::AbstractVector{V}) where {T<:Real, V<:AbstractVector{<:BasisComponent{T}}}
+    s = zero(T)
     for i=1:3  # for each component f[i], g[i]
         for n=1:length(g[i])
             s += innerproduct(f.u[i], g[i][n]) # sum the inner products of f[i] with terms in g[i]
@@ -420,21 +463,14 @@ end
 struct SparseBilinear{T} 
     ijk::Matrix{Int64}
     val::Vector{T}
-    m   # output dimension
-
-    function SparseBilinear{T}(ijk, val::Vector{T}, m) where T <: Number
+    m::Int   # output dimension
+    function SparseBilinear(ijk, val::Vector{T}, m) where T <: Real
         size(ijk,2) == 3 || error("ijk must have three columns")
         size(ijk,1) == length(val) || error("ijk and val must have same number of rows")
-        
         new{T}(ijk, val, m)
     end
     
 end
-
-"""
-construct SparseBilinear operator from m x 3 matrix ijk of indices and m-vector val of values
-"""
-SparseBilinear(ijk, val::Vector{T}, m) where T<:Number = SparseBilinear{T}(ijk, val, m)
 
 """
 construct SparseBilinear operator from vectors I,J,K of indices and m-vector V of values
@@ -447,22 +483,20 @@ construct SparseBilinear from dense Array{T,3}
 """
 function SparseBilinear(N::Array{T, 3}) where T<:Number 
     m = size(N,1)
-    zeroT = zero(T)
-
     # count number nonzeros
     nnz = 0
     for i=1:size(N,1), j=1:size(N,2), k=1:size(N,3)
-        if N[i,j,k] != zeroT
+        if N[i,j,k] != 0
             nnz += 1
         end
     end
 
-    ijk = fill(0, nnz, 3)
-    val = fill(zeroT, nnz)
+    ijk = zeros(Int, nnz, 3)
+    val = zeros(T, nnz)
 
     r = 1
     for i=1:size(N,1), j=1:size(N,2), k=1:size(N,3)
-        if N[i,j,k] != zeroT
+        if N[i,j,k] != 0
             ijk[r,1] = i
             ijk[r,2] = j
             ijk[r,3] = k
@@ -479,9 +513,9 @@ sparse(N::Array{T, 3}) where T<:Number = SparseBilinear(N)
 """
 evaluate N_ijk x_j y_k
 """
-function (N::SparseBilinear{T})(x, y) where T<:Number
-    rtnT = typeof(zero(T)*zero(eltype(x)))
-    rtn = zeros(rtnT, N.m)
+function (N::SparseBilinear{TN})(x::TXY, y::TXY) where {TN<:Real, TXY<:Real}
+    T = promote_type(TN, TXY)
+    rtn = zeros(T, N.m)
     for r = 1:length(N.val)
         # clearest form:  i,j,k = N.ijk[r,:]; rtn[i] += N.val[r] * x[j] * y[k]
         # same without temporaries:
@@ -498,9 +532,9 @@ evaluate N_ijk x_j y_k
 """
 evaluate DN_ij = d/dx_j (N_ilk x_l x_k) 
 """
-function derivative(N::SparseBilinear{T}, x) where T
-    rtnT = typeof(zero(eltype(x))*zero(T))
-    DN = fill(zero(rtnT), N.m, N.m) # use a dense matrix, since DN is 99% dense
+function derivative(N::SparseBilinear{TN}, x::AbstractVector{TX}) where {TN<:Real, TX<:Real}
+    T = promote_type(TN, TX)
+    DN = zeros(T, N.m, N.m) # use a dense matrix, since DN is 99% dense
     
     for r = 1:length(N.val)
         #println("$r "); flush(stdout)
@@ -617,7 +651,7 @@ function basisIndices(J::Int, K::Int, L::Int)
     ijkl
 end
 
-function basisIndices(J::Int, K::Int, L::Int, H::Vector{Symmetry}) 
+function basisIndices(J::Int, K::Int, L::Int, H::AbstractVector{Symmetry})
     # make full set of indices with no symmetry restrictions
     ijklfull = basisIndices(J,K,L)
 
@@ -631,18 +665,19 @@ end
 """
 return OffSetArray of Legendre polynomials P_n(y) for n=0 to K
 """
-function legendrePolynomials(L::Int, symbol=:y)
+function legendrePolynomials(T::Type, L::Int, symbol=:y)
     L >= 0 || error("invalid L value L=$(L), should be nonnegative")
-    P = OffsetVector(fill(Polynomial([0.0], :y), L+1), -1)
-    P[0] = Polynomial([1.0], :y)
+    P = OffsetVector(fill(Polynomial([zero(T)], :y), L+1), -1)
+    P[0] = Polynomial{T}([1], :y)
     if L>1
-        P[1] = Polynomial([0.0; 1.0], :y)
+        P[1] = Polynomial{T}([0, 1], :y)
     end
     for n = 2:L
         P[n] = ((2*n-1)*P[1]*P[n-1] - (n-1)*P[n-2])/n
     end
-    P
+    return P
 end
+legendrePolynomials(L, symbol=:y) = legendrePolynomials(Float64, L, symbol)
 
 
 """
@@ -651,26 +686,26 @@ make a set of basis functions Ψijkl, return as an array of BasisFunctions
    basis functions are all zero divergence, div Psi = 0, and zero at walls, Psi(x,±1,z) = 0.
    set definition is complicated, see LaTeX documentation elsewhere...
 """
-function basisSet(α::Real, γ::Real, ijkl::Matrix{Int}; normalize=false)
+function basisSet(α::T, γ::T, ijkl::Matrix{Int}; normalize=false) where {T<:Real}
     N = size(ijkl, 1)
     J = maximum(abs.(ijkl[:,2]))
     K = maximum(abs.(ijkl[:,3]))
     L = maximum(ijkl[:,4])
 
-    smasher = Polynomial([1; 0.0; -1], :y)  # smasher  =  1-y^2
+    smasher = Polynomial{T}([1; 0; -1], :y)  # smasher  =  1-y^2
     smasher2 = smasher*smasher            # smasher2 = (1-y^2)^2
-    P = legendrePolynomials(L)            # l = 0:L, even/odd with l
+    P = legendrePolynomials(T, L)            # l = 0:L, even/odd with l
 
-    S0 = Polynomial([0; 1; 0; -1/3], :y)           # S0(y) = y - y^3/3
+    S0 = Polynomial{T}([0; 1; 0; -1/3], :y)           # S0(y) = y - y^3/3
     S = OffsetVector([S0; smasher2.*P[0:L-1]], -1) # l = 1:L, even/odd with l+1
     Sprime = derivative.(S)                        # l = 0:L, even/odd with l
 
     Ejx = OffsetVector([FourierMode(j, α) for j in -J:J], -(J+1))
     Ekz = OffsetVector([FourierMode(k, γ) for k in -K:K], -(K+1))
 
-    zeroEjx = FourierMode(zero(α), 0, α)
-    zeroEkz = FourierMode(zero(γ), 0, γ)
-    zeropoly = Polynomial(0.0, :y)
+    zeroEjx = FourierMode(zero(T), 0, α)
+    zeroEkz = FourierMode(zero(T), 0, γ)
+    zeropoly = Polynomial(zero(T), :y)
     zerocomp = BasisComponent(0, zeroEjx, zeroEkz, zeropoly, 0)
 
     Ψ = fill(BasisFunction(), N)
@@ -999,11 +1034,11 @@ end
 
 return a function shear(x) that computes the wall shear rate of u = sum x[i] Ψ[i]
 """
-function shearFunction(Ψ)
+function shearFunction(Ψ::AbstractVector{BasisFunction{T}}) where {T<:Real}
     # Produce vector shearΨ for evaluating dissipation from x values:
     N = length(Ψ)
     println("Building shear(x)...")
-    shearΨ = fill(0.0, N)
+    shearΨ = zeros(T, N)
     for i=1:N    
         if Ψ[i].u[1].ejx.waveindex == 0 && Ψ[i].u[1].ekz.waveindex == 0
             dΨudy = yderivative(Ψ[i].u[1])
