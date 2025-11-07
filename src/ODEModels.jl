@@ -44,6 +44,7 @@ function ODEModel(Ψ::AbstractVector{BasisFunction{T}}) where {T<:Real}
             end
         end
     end
+    println("")
 
     A12 = A1+A2
     N  = SparseBilinear(Ndense)
