@@ -513,7 +513,7 @@ sparse(N::Array{T, 3}) where T<:Number = SparseBilinear(N)
 """
 evaluate N_ijk x_j y_k
 """
-function (N::SparseBilinear{TN})(x::TXY, y::TXY) where {TN<:Real, TXY<:Real}
+function (N::SparseBilinear{TN})(x::AbstractVector{TXY}, y::AbstractVector{TXY}) where {TN<:Real, TXY<:Real}
     T = promote_type(TN, TXY)
     rtn = zeros(T, N.m)
     for r = 1:length(N.val)

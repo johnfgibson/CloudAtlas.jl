@@ -8,7 +8,7 @@ hookstep(fx, Dfx, Δx, δ; Nmusearch=10, verbose=true, δtol = 0.01) :
 
     return hookstep Δx that minimizes 1/2 ||fx + Df Δx||^2 subject to ||Δx|| = δ
 """
-function hookstep(fx, Dfx, δ, Δx_newt; R = 250, δtol = 1e-04, Nmusearch=10, verbosity=0)
+function hookstep(fx, Dfx, δ, Δx_newt; δtol = 1e-04, Nmusearch=10, verbosity=0)
     
     norm_Δx = norm(Δx_newt)
     if (norm_Δx <= δ)
@@ -123,6 +123,7 @@ function hookstepsolve(
     f, 
     Df, 
     xguess::AbstractVector{T}; 
+    R=250,
     ftol=1e-08, 
     xtol=1e-08, 
     δ=0.02, 
@@ -162,7 +163,7 @@ function hookstepsolve(
         
         # compute Newton step Δx
         verbosity > 0 && printflush("computing Df(x)...")
-        Dfx = Df(x)
+        Dfx = Df(x, R)
         verbosity > 0 && printflush("solving Df(x) Δx = -f(x)...")
         Δx = -Dfx\fx
         #verbosity > 0 && printflush("mopping up Δx solve...")
@@ -232,7 +233,7 @@ function hookstepsolve(
             #  
             # r(x + Δx) ≈ r(x) + fᵀ Df(x) Δx  (dropping quadratic terms give estimate linear in Δx)
             x_hook = x + Δx
-            r_hook = 1/2*norm2(f(x+Δx))             # actual residual of hookstep, x + Δx
+            r_hook = 1/2*norm2(f(x+Δx, R))             # actual residual of hookstep, x + Δx
             #r_linear = 1/2*(norm2(fx) + fx'*DfΔx)   # estimate of residual that is linear in Δx
             r_linear = 1/2*(norm2(fx) + dot(fx,DfΔx))   # estimate of residual that is linear in Δx
             r_quadratic = 1/2*norm2(fx + DfΔx)      # estimate of residual that is quadratic in Δx
