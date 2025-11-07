@@ -23,7 +23,6 @@ using LinearAlgebra
     @time @testset "Hookstep Solve" begin
         α, γ = 1.0, 2.0                     # Fourier wavenumbers α, γ = 2π/Lx, 2π/Lz
         J,K,L = 1,1,3                       # Bounds on Fourier modes (J,K) and wall-normal polynomials (L)
-        R = 250
         guessNorm = 0.2
 
         id = Symmetry()
@@ -37,12 +36,12 @@ using LinearAlgebra
 
         ijkl = basisIndices(J,K,L, H) # Compute index set of H-symmetric basis elements Ψijkl
         Ψ = basisSet(α, γ, ijkl)      # Compute basis elements Ψijkl in the index set
-        f, Df = ODEModel(Ψ)         # Do Galerkin projection, return f(x,R) for ODE dx/dt = f(x,R)
+        model = ODEModel(Ψ)         # Do Galerkin projection, return f(x,R) for ODE dx/dt = f(x,R)
 
         Nmodes = length(Ψ) 
         xguess = normalize(randn(Nmodes)) * guessNorm
 
-        xsoln, success = hookstepsolve(f, Df, xguess, ftol=1e-08, xtol=1e-12, Nnewton=30,Nhook=8,verbosity=0)
+        xsoln, success = hookstepsolve(model, xguess)
 
         @test success
     end

@@ -11,10 +11,6 @@ import LinearAlgebra: norm
 import Polynomials: derivative
 import SparseArrays: sparse
 
-include("Hookstep.jl")
-
-export hookstepsolve 
-
 include("Symmetries.jl")
 
 export Symmetry, symmetric
@@ -26,5 +22,10 @@ export FourierMode, BasisComponent, BasisFunction, compatible, isorthogonal, inn
 include("ODEModels.jl")
 
 export ODEModel
+
+include("Hookstep.jl")
+
+export hookstepsolve 
+
 
 end # module CloudAtlas

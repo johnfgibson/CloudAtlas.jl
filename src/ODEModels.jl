@@ -1,3 +1,15 @@
+struct ODEModel{T<:Real, TB, TF, TDF}
+    B::AbstractMatrix{T}
+    A1::AbstractMatrix{T}
+    A2::AbstractMatrix{T}
+    A3::AbstractMatrix{T}
+    N::SparseBilinear{T}
+    Bfact::TB
+    f::TF
+    Df::TDF
+end
+
+
 """
    f, Df = ODEmodel(Ψ)
 
@@ -38,12 +50,20 @@ function ODEModel(Ψ::AbstractVector{BasisFunction{T}}) where {T<:Real}
 
     # precompute LU decomp of Bf to speed repeated calls to Bf x = b solves
     Bfact = lu(B)
-    @show Bfact
     
     # construct Re-parameterized f and Df functions 
     f(x,R)  = Bfact\(A12*x + (1/R)*(A3*x) + N(x))
     Df(x,R) = Bfact\(A12 + (1/R)*(A3) + derivative(N,x))
     
-    f, Df # return functions f(x,R) and Df(x,R)
+    return ODEModel(
+        B,
+        A1,
+        A2,
+        A3,
+        N,
+        Bfact,
+        f,
+        Df,
+    )
 end
 

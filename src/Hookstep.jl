@@ -3,6 +3,17 @@ function printflush(string)
     flush(stdout)
 end
 
+Base.@kwdef struct SearchParams{T<:Real}
+    R::T=250.0
+    ftol::T=1e-08 
+    xtol::T=1e-08 
+    δ::T=0.02
+    Nnewton::Int=20 
+    Nhook::Int=4
+    Nmusearch::Int=6
+    verbosity::Int=0
+end
+
 """
 hookstep(fx, Dfx, Δx, δ; Nmusearch=10, verbose=true, δtol = 0.01) :
 
@@ -83,7 +94,7 @@ function Df_finitediff(f,x; eps=1e-06)
 end
 
 """
-    hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0) :
+    hookstepsolve(model::ODEModel, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0) :
 
 Solve f(x) = 0 for x using Newton-hookstep algorithm using finite-difference estimate of Df
 f is a function f(x)
@@ -101,11 +112,16 @@ usage:
 
 return value x is the solution, success is a boolean flag indicating success (convergence) or failure (local minimum)
 """
-
-function hookstepsolve(f, xguess; ftol=1e-08, xtol=1e-08, δ=0.02, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0)
-    hookstepsolve(f, x -> Df_finitediff(f,x), xguess, ftol=ftol, xtol=xtol, δ=δ, Nnewton=Nnewton,
-                  Nhook=Nhook, Nmusearch=Nmusearch, verbosity=verbosity)
+function hookstepsolve(
+    model::ODEModel,
+    xguess::AbstractVector{T},
+    params = SearchParams()
+) where {T<:Real}
+    return hookstepsolve(model.f, model.Df, xguess, params)
 end
+
+
+hookstepsolve(f, xguess, params = SearchParams()) = hookstepsolve(f, x -> Df_finitediff(f,x), xguess, params)
 
 """
 hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0) :
@@ -122,15 +138,8 @@ hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity
 function hookstepsolve(
     f, 
     Df, 
-    xguess::AbstractVector{T}; 
-    R=250,
-    ftol=1e-08, 
-    xtol=1e-08, 
-    δ=0.02, 
-    Nnewton=20, 
-    Nhook=4, 
-    Nmusearch=6, 
-    verbosity=0
+    xguess::AbstractVector{T},
+    params = SearchParams()
 ) where {T<:Real}
 
     δmax = 1
@@ -141,10 +150,17 @@ function hookstepsolve(
     
     # x, rx change once per newton step, are constant throughout hookstep calculations
     x = xguess           
-    Xiterates = zeros(Nnewton+1, length(x))
+    Xiterates = zeros(params.Nnewton+1, length(x))
     Xiterates[1,:] = x
     
-    for n = 1:Nnewton
+    verbosity = params.verbosity
+    R = params.R
+    ftol = params.ftol
+    xtol = params.xtol
+    Nhook = params.Nhook
+    Nmusearch = params.Nmusearch
+    δ = params.δ
+    for n = 1:params.Nnewton
         verbosity > 0 && printflush("\nNewton step $n :")
         verbosity > 2 && printflush("x = $x")
         
