@@ -29,6 +29,6 @@ export ODEModel
 
 include("Hookstep.jl")
 
-export hookstepsolve 
+export hookstepsolve, SearchParams
 
 end # module CloudAtlas

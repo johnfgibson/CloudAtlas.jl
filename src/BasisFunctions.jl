@@ -7,6 +7,8 @@
 # divide(x::AbstractFloat, y::AbstractFloat) = x/y
 # divide(x::AbstractFloat, y::AbstractFloat) = x/y
 
+const T_ELEMENT = Float64
+
 parity(k) = k%2 == 0 ? 1 : -1    # 1 for k even, -1 for k odd
 square(x) = x*x
 
