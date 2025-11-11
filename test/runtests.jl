@@ -26,19 +26,19 @@ using LinearAlgebra
         guessNorm = 0.2
 
         id = Symmetry()
-        sx = Symmetry(-1,1,1)
-        sy = Symmetry(1,-1,1)
-        sz = Symmetry(1,1,-1)
-        tx = Symmetry(1,1,1, 1//2, 0//1)
-        tz = Symmetry(1,1,1, 0//1, 1//2)
+        sx = Symmetry(-1, 1, 1)
+        sy = Symmetry(1, -1, 1)
+        sz = Symmetry(1, 1, -1)
+        tx = Symmetry(1, 1, 1, 1//2, 0//1)
+        tz = Symmetry(1, 1, 1, 0//1, 1//2)
 
-        H = [sx*sy*sz, sz*tx*tz]            # Generators of the symmetric subspace of the Nagata eqb
+        H = [sx * sy * sz, sz * tx * tz]            # Generators of the symmetric subspace of the Nagata eqb
 
-        ijkl = basisIndices(J,K,L, H) # Compute index set of H-symmetric basis elements Ψijkl
+        ijkl = basisIndices(J, K, L, H) # Compute index set of H-symmetric basis elements Ψijkl
         Ψ = basisSet(α, γ, ijkl)      # Compute basis elements Ψijkl in the index set
         model = ODEModel(Ψ)         # Do Galerkin projection, return f(x,R) for ODE dx/dt = f(x,R)
 
-        Nmodes = length(Ψ) 
+        Nmodes = length(Ψ)
         xguess = normalize(randn(Nmodes)) * guessNorm
 
         xsoln, success = hookstepsolve(model, xguess)

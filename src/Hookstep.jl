@@ -166,7 +166,7 @@ function hookstepsolve(
         
         # start Newton step from best computed values over all previous computations
         verbosity > 0 && println("evaluating f(x)...")
-        fx = f(x, R)
+        fx = f(x)
         rx = 1/2*norm2(fx)
 
         if sqrt(2rx) <= ftol
@@ -179,7 +179,7 @@ function hookstepsolve(
         
         # compute Newton step Δx
         verbosity > 0 && printflush("computing Df(x)...")
-        Dfx = Df(x, R)
+        Dfx = Df(x)
         verbosity > 0 && printflush("solving Df(x) Δx = -f(x)...")
         Δx = -Dfx\fx
         #verbosity > 0 && printflush("mopping up Δx solve...")
@@ -249,7 +249,7 @@ function hookstepsolve(
             #  
             # r(x + Δx) ≈ r(x) + fᵀ Df(x) Δx  (dropping quadratic terms give estimate linear in Δx)
             x_hook = x + Δx
-            r_hook = 1/2*norm2(f(x+Δx, R))             # actual residual of hookstep, x + Δx
+            r_hook = 1/2*norm2(f(x+Δx))             # actual residual of hookstep, x + Δx
             #r_linear = 1/2*(norm2(fx) + fx'*DfΔx)   # estimate of residual that is linear in Δx
             r_linear = 1/2*(norm2(fx) + dot(fx,DfΔx))   # estimate of residual that is linear in Δx
             r_quadratic = 1/2*norm2(fx + DfΔx)      # estimate of residual that is quadratic in Δx
