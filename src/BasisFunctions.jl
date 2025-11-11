@@ -59,7 +59,7 @@ end
 # zero(ej::FourierMode) = FourierMode(0, 0, ej.wavenumber)
 
 FourierMode{T}() where {T<:Real} = FourierMode(zero(T),0,zero(T))
-FourierMode() = FourierMode{Float64}()
+FourierMode() = FourierMode{T_ELEMENT}()
 FourierMode(j, α) = FourierMode(one(α),j,α)
 
 function (f::FourierMode)(x::Real) 
@@ -249,7 +249,7 @@ struct BasisComponent{T<:Real}
 end
 
 BasisComponent{T}() where {T<:Real} = BasisComponent(zero(T), FourierMode{T}(), FourierMode{T}(), Polynomial(zero(T), :y), 0) 
-BasisComponent() = BasisComponent{Float64}()
+BasisComponent() = BasisComponent{T_ELEMENT}()
 
 (f::BasisComponent)(x::Real, y::Real, z::Real) = f.coeff * f.ejx(x) * f.ekz(z) * f.p(y)
 (f::BasisComponent)(x::Vector) = f.coeff * f.ejx(x[1]) * f.ekz(x[3]) * f.p(x[2])
@@ -376,7 +376,7 @@ struct BasisFunction{T<:Real}
 end
 
 BasisFunction{T}() where {T<:Real} = BasisFunction(SVector(BasisComponent{T}(), BasisComponent{T}(), BasisComponent{T}()))
-BasisFunction() = BasisFunction{Float64}()
+BasisFunction() = BasisFunction{T_ELEMENT}()
 
 BasisFunction(u::BasisComponent, v::BasisComponent, w::BasisComponent) = BasisFunction(SVector(u, v, w))
 
@@ -677,7 +677,7 @@ function legendrePolynomials(T::Type, L::Int, symbol=:y)
     end
     return P
 end
-legendrePolynomials(L, symbol=:y) = legendrePolynomials(Float64, L, symbol)
+legendrePolynomials(L, symbol=:y) = legendrePolynomials(T_ELEMENT, L, symbol)
 
 
 """
