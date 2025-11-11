@@ -11,6 +11,8 @@ import LinearAlgebra: norm
 import Polynomials: derivative
 import SparseArrays: sparse
 
+const T_ELEMENT = Float64
+
 include("Hookstep.jl")
 
 export hookstepsolve 

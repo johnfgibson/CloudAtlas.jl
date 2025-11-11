@@ -6,10 +6,10 @@ onto basis set Ψ.
 
 Return functions f(x,R) and Df(x,R) (the matrix of partial derivatives of f). 
 """
-function ODEModel(Ψ)
+function ODEModel(Ψ::AbstractVector{BasisFunction{T}}) where {T<:Real}
     
     Nmodes = length(Ψ)
-    y = Polynomial([0.0;1.0], :y)
+    y = Polynomial{T, :y}([zero(T), one(T)])
 
     # these matrix calculations could be done with fewer conversions
     # should make elements with Rational{T} or Float type as desired
@@ -21,33 +21,28 @@ function ODEModel(Ψ)
     A3 = [innerproduct(Ψ[i], laplacian(Ψ[j])) for i in 1:Nmodes, j in 1:Nmodes]
 
     println("Making quadratic operator N...")
-    Ndense = fill(0.0, Nmodes, Nmodes, Nmodes)
+    Ndense = zeros(T, Nmodes, Nmodes, Nmodes)
     for j in 1:Nmodes
         print("$j ")
         for k in 1:Nmodes    
             Ψj_dotgrad_Ψk = dotgrad(Ψ[j], Ψ[k])
             for i in 1:Nmodes
                 val = -innerproduct(Ψ[i], Ψj_dotgrad_Ψk)
-                Ndense[i,j,k] = abs(val) > 1e-15 ? val : 0
+                Ndense[i,j,k] = abs(val) > 1e-15 ? val : zero(T) 
             end
         end
     end
-    println("")
-    flush(stdout)
 
-    # convert rational matrices and dense N to floats and sparse float N
-    Bf   = Float64.(B)
-    A12f = Float64.(A1+A2)
-    A3f  = Float64.(A3)
+    A12 = A1+A2
     N  = SparseBilinear(Ndense)
-    Nf = SparseBilinear(N.ijk, Float64.(N.val), Nmodes)
 
     # precompute LU decomp of Bf to speed repeated calls to Bf x = b solves
-    BfLU = lu(Bf)
+    Bfact = lu(B)
+    @show Bfact
     
     # construct Re-parameterized f and Df functions 
-    f(x,R)  = BfLU\(A12f*x + (1/R)*(A3f*x) + Nf(x))
-    Df(x,R) = BfLU\(A12f + (1/R)*(A3f) + derivative(Nf,x))
+    f(x,R)  = Bfact\(A12*x + (1/R)*(A3*x) + N(x))
+    Df(x,R) = Bfact\(A12 + (1/R)*(A3) + derivative(N,x))
     
     f, Df # return functions f(x,R) and Df(x,R)
 end

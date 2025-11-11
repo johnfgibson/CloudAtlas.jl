@@ -83,23 +83,23 @@ function Df_finitediff(f,x; eps=1e-06)
 end
 
 """
-hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0) :
+    hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0) :
 
-    Solve f(x) = 0 for x using Newton-hookstep algorithm using finite-difference estimate of Df
-    f is a function f(x)
-    xguess is the initial guess for the solution
+Solve f(x) = 0 for x using Newton-hookstep algorithm using finite-difference estimate of Df
+f is a function f(x)
+xguess is the initial guess for the solution
 
-    optional named arguments:
-      δ is the initial trust-region radius
-      Nnewton is the maximum number of Newton steps
-      Nhook is the maximum number of hooksteps per Newton step
-      Nmusearch is the maximum number of iterations to find a hookstep with length equal to δ
-      verbosity == 0,1,2 gives none, terse, and verbose diagnostic printouts
+optional named arguments:
+  δ is the initial trust-region radius
+  Nnewton is the maximum number of Newton steps
+  Nhook is the maximum number of hooksteps per Newton step
+  Nmusearch is the maximum number of iterations to find a hookstep with length equal to δ
+  verbosity == 0,1,2 gives none, terse, and verbose diagnostic printouts
 
-    usage: 
-      x, success = hookstep(f,Df, δ=0.2, Nnewton=8)   # example with two named arguments
+usage: 
+  x, success = hookstep(f,Df, δ=0.2, Nnewton=8)   # example with two named arguments
 
-    return value x is the solution, success is a boolean flag indicating success (convergence) or failure (local minimum)
+return value x is the solution, success is a boolean flag indicating success (convergence) or failure (local minimum)
 """
 
 function hookstepsolve(f, xguess; ftol=1e-08, xtol=1e-08, δ=0.02, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0)
@@ -119,7 +119,18 @@ hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity
     Nmusearch is the maximum number of iterations to find a hookstep with length equal to δ
     verbosity == 0,1,2 gives none, terse, and verbose diagnostic printouts
 """
-function hookstepsolve(f, Df, xguess; ftol=1e-08, xtol=1e-08, δ=0.02, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0)
+function hookstepsolve(
+    f, 
+    Df, 
+    xguess::AbstractVector{T}; 
+    ftol=1e-08, 
+    xtol=1e-08, 
+    δ=0.02, 
+    Nnewton=20, 
+    Nhook=4, 
+    Nmusearch=6, 
+    verbosity=0
+) where {T<:Real}
 
     δmax = 1
     δmin = 0.001
