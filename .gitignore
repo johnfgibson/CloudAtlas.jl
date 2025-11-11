@@ -28,3 +28,9 @@ docs/site/
 Manifest.toml
 
 # End of https://www.toptal.com/developers/gitignore/api/julia
+
+# Misc Jupyter output
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+.virtual_documents
+*/.virtual_documents/*
