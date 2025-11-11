@@ -160,7 +160,11 @@ function hookstepsolve(
     Nhook = params.Nhook
     Nmusearch = params.Nmusearch
     δ = params.δ
+
+    #debugging = true
+
     for n = 1:params.Nnewton
+        verbosity > 0 && printflush("\n\n\n===================================")
         verbosity > 0 && printflush("\nNewton step $n :")
         verbosity > 2 && printflush("x = $x")
         
@@ -187,8 +191,8 @@ function hookstepsolve(
         DfΔx_newt= Dfx*Δx
 
         verbosity > 2 && printflush("Δx newton = $Δx") ; flush(stdout) 
-        verbosity > 0 && printflush("norm(Δx newton) = $(norm(Δx))"); flush(stdout) 
-        # verify that residual is decreasing in direction of Newton step (it oughta be!)
+        #verbosity > 0 && printflush("norm(Δx newton) = $(norm(Δx))"); flush(stdout) 
+        #verify that residual is decreasing in direction of Newton step (it oughta be!)
         #@show  fx
         #@show typeof(fx)
         #@show  fx'
@@ -219,11 +223,21 @@ function hookstepsolve(
         norm_Δx_newt = norm_Δx 
         x_hook = x + Δx        # Declare x_hook, modify it iteratively in hookstep loop.
 
-        verbosity > 0 && printflush("Starting trust region evaluation, trust region radius δ = $δ...")
+        if verbosity > 0 
+            relation = norm_Δx_newt ≤ δ ? "inside" : "outside"
+            println("Starting trust region evaluation");
+            println("Newton step radius  == $norm_Δx_newt")
+            println("Trust region radius == $δ")
+            println("Newton step is $relation the trust region");
+        end
+
         for h in 1:Nhook
-            verbosity > 0 && printflush("Hookstep $(h): finding hookstep Δx s.t. |Δx| = δ = $δ")
-            Δx = hookstep(fx, Dfx, δ, Δx_newt, Nmusearch=Nmusearch, verbosity=verbosity-1)
-            verbosity > 1 && printflush("Found hookstep Δx s.t. |Δx| = δ = $δ")
+
+            if  norm_Δx_newt > δ
+                verbosity > 0 && printflush("Hookstep $(h): finding hookstep Δx s.t. |Δx| ≤ δ = $δ")
+                Δx = hookstep(fx, Dfx, δ, Δx_newt, Nmusearch=Nmusearch, verbosity=verbosity-1)
+                verbosity > 1 && printflush("Found hookstep Δx s.t. |Δx| = δ = $δ")
+            end
 
             verbosity > 1 && printflush("Computing Df Δx...")
             DfΔx = Dfx*Δx
@@ -238,11 +252,11 @@ function hookstepsolve(
                         
             newton_step_within_delta = norm_Δx_newt <= δ ? true : false
 
-            verbosity > 0 && print("Assessing Δx...")
+            verbosity > 0 && println("Assessing Δx...")
             # Compute actual (squared) residual of hookstep and linear & quadratic estimates based purely
             # on Δx and evaluations of f(x) and Df(x) at current Newton step. These derive from 
             # r(x + Δx) = 1/2 ||f(x+Δx)||^2
-            #           ≈ 1/2 ||f(x) + Df(x) Δx||^2                  (this estimate in quadratic in Δx)
+            #           ≈ 1/2 ||f(x) + Df(x) Δx||^2                  (this estimate is quadratic in Δx)
             #           ≈ 1/2 (f(x) + Df(x) Δx)ᵀ (f(x) + Df(x) Δx)
             #           ≈ 1/2 (f(x)ᵀ f(x) + 2 fᵀ Df(x) Δx + (Df(x) Δx)ᵀ (Df(x) Δx))
             #           ≈ r(x) + fᵀ Df(x) Δx + 1/2 (Df(x) Δx)ᵀ (Df(x) Δx) 
@@ -250,22 +264,53 @@ function hookstepsolve(
             # r(x + Δx) ≈ r(x) + fᵀ Df(x) Δx  (dropping quadratic terms give estimate linear in Δx)
             x_hook = x + Δx
             r_hook = 1/2*norm2(f(x+Δx))             # actual residual of hookstep, x + Δx
-            #r_linear = 1/2*(norm2(fx) + fx'*DfΔx)   # estimate of residual that is linear in Δx
-            r_linear = 1/2*(norm2(fx) + dot(fx,DfΔx))   # estimate of residual that is linear in Δx
+            #r_linear = 1/2*(norm2(fx) + 2*fx'*DfΔx)   # estimate of residual that is linear in Δx
+            r_linear = rx + dot(fx,DfΔx)            # estimate of residual that is linear in Δx
             r_quadratic = 1/2*norm2(fx + DfΔx)      # estimate of residual that is quadratic in Δx
-        
+
+            #println("r(x)     = $rx")
+            #println("r(x+Δxₕ) = $r_hook")
+            #println("rlinear  = $r_linear")
+            #println("rquadrat = $r_quadratic")
+
             # Differences in actual, linear, and quadratic estimates with sign set so that 
             # positive Δr == good, and bigger Δr == better. 
-            Δr_hook = -(r_hook - rx)
-            #Δr_linear = -1/2*(fx'*DfΔx)              # == -(r_linear - rx) without doing the subtraction
-            Δr_linear = -1/2*dot(fx,DfΔx)             # == -(r_linear - rx) without doing the subtraction
-            Δr_quadratic = -(r_quadratic - rx)
-                        
+            Δr_hook = rx- r_hook
+            #Δr_linear = (fx'*DfΔx)              # == -(r_linear - rx) without doing the subtraction
+            Δr_linear = rx - r_linear            # dot(fx,DfΔx) is same without subtraction
+            Δr_quadratic = rx - r_quadratic
+   
             verbosity > 1 && printflush("\nTrust region adjustment for $(h): |Δx| = $δ, r(xₙ+Δx) = $(r_hook), compared to r(xₙ) = $(rx)")
             # revise trust region radius and do or don't recompute hookstep based on 
             # comparisons between actual change in residual and linear & quadratic models
             # note that diff between r_quadratic and r_linear is positive definite, so 0 < Δr_quadratic < Δr_linear
-            
+     
+            #=====================================       
+            if debugging
+                hookdata = [rx; δ; r_linear; r_quadratic; r_hook]
+                @show rx
+                @show δ
+                @show r_linear
+                @show r_quadratic
+                @show r_hook
+                @show Δr_linear
+                @show Δr_quadratic
+                @show Δr_hook       
+                m = -Δr_linear/δ
+                c = (r_hook - rx - m*δ)/δ^2 
+                δnew = -m/(2c)
+                @show m
+                @show c
+                @show δnew
+                save(hookdata, "hookdata")
+                println("press enter to continue, x to stop debugging..")
+                keystroke = readline()
+                if keystroke == "x"
+                    debugging = false
+                end
+            end
+            ==============================#
+
             if Δr_hook > Δr_linear                # actual is better than linear estimate (quadratic helps!)
                 verbosity > 0 && print("negative curvature, ")
                 if newton_step_within_delta
@@ -286,14 +331,22 @@ function hookstepsolve(
                 verbosity > 0 && printflush("marginal improvement, decreasing δ  = $δ -> δ/2 = $(δ/2) and continuing to next Newtown step")
                 δ = δ/2                            # actual is worse than quadratic estimate
                 break                              # reduce trust region and go to next Newton step
-            elseif 0.8*Δr_quadratic < Δr_hook < 2* Δr_quadratic   
-                # actual is close to quadratic estimate                
-                # revise trust region based on quadratic model of residual and recompute
-                rprime = Δr_linear/δ
-                rprime2 = 2*(r_hook - rx - rprime*δ)/δ^2 
-                δnew = -rprime/rprime2
-                verbosity > 0 && printflush("accurate improvement, considering δ  = $δ -> δnew = $(δnew) from quadratic model")
-                                      
+            elseif  0.8*Δr_quadratic < Δr_hook < 1.2*Δr_quadratic   
+                # Actual decrease at current hookstep is close to quadratic estimate from Df,
+                # and not as good as suggested by slope at origin (we have Δr_hook > Δr_linear, so r_hook >= r_linear).
+                # Attempt to adjust trust-region radius δ based on a quadratic model of residual, r(δ)
+                # using form r(δ) = rx + m δ + c δ^2 and the measured value of r(δ) = r_hook (where δ is the current radius)
+                # Get m from conditions at δ=0, namely, m = fx'*DfΔx/||Δx|| = fx'*DfΔx/δ
+                # Fit c to data point r(δ) = r_hook. That gives c = (r_hook - rx - m δ)/δ^2
+                # We know c>0, since r_hook > r_linear = rx + + m δ. So the model has a minimum between
+                # 0 and the current δ. The minimum occurs at δ = -m/(2c)
+                m = -Δr_linear/δ
+                c = (r_hook - rx - m*δ)/δ^2 
+                δnew = -m/(2c)
+                #@show m
+                #@show c
+                #@show δnew
+                verbosity > 0 && printflush("accurate improvement, quadratic model suggests δ  = $δ -> δnew = $(δnew)")
                 if newton_step_within_delta
                     verbosity > 0 && printflush("but Newton step is within trust region, so don't change δ, and go to next Newton step")
                 elseif δnew < 2δ/3
@@ -306,12 +359,12 @@ function hookstepsolve(
                     verbosity > 0 && printflush("not too much change, changing δ = $δ -> δnew = $δnew and continuing to next Newtown step")
                     δ = δnew
                 end
+
                 break
             else 
                 verbosity > 0 && printflush("good improvement, keeping δ = $(δ) and continuing to next Newtown step")
                 break                              # hookstep is decent enough, don't adjust, go to next Newton               
             end
-                    
         end
         
         verbosity > 0 && printflush("Finished trust region evaluation, trust region radius δ = $δ...")
