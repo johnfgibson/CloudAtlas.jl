@@ -27,4 +27,9 @@ include("ODEModels.jl")
 
 export ODEModel
 
+include("Channelflow.jl")
+using .Channelflow
+
+export projectfield, field_to_coeff, coeff_to_field, changegrid, findsoln, continuesoln
+
 end # module CloudAtlas
