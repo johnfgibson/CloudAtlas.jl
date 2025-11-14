@@ -28,7 +28,7 @@ function hookstep(fx, Dfx, δ, Δx_newt; δtol = 1e-04, Nmusearch=10, verbosity=
     end
 
     # start Newton iteration to solve norm(Δx(μ)) - δ == 0, with guess μ=0, Δx(μ) = Δx_newt
-    μ = 0
+    μ = 1e-06
     Δx = copy(Δx_newt)
     H = Dfx'*Dfx 
     

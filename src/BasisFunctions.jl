@@ -946,6 +946,48 @@ function shearFunction(Ψ::AbstractVector{BasisFunction{T}}) where {T<:Real}
 end
 
 
+"""
+    basis_index_dict(ijklΨ, ijklΦ)
+
+Return n->m dict such that ijklΨ[n] = ijklΦ[dict[n],:] for all keys n in dict
+"""
+function basis_index_dict(ijklΨ, ijklΦ)
+    n2m = Dict{Int,Int}([])
+    for n = 1:size(ijklΨ,1)
+        m = findfirst(row -> row == ijklΨ[n,:], eachrow(ijklΦ))  # find m s.t. ijklΦ[m,:] == ijklΨ[n,:]
+        if m != nothing
+            n2m[n] = m
+        end
+    end
+    n2m
+end
+
+
+"""
+    changebasis(x, ijklΨ, ijklΦ)
+    
+Convert expansion coefficients x in basis Ψ to expansion coeffs y in basis Φ.
+so sum_n x[n] Ψ[n] = sum_m y[m] Φ[m] as closely as possible. Do this by
+identifying elements of Φ that occur in Ψ and copying coefficients to match. 
+"""
+function changebasis(x, ijklΨ, ijklΦ)
+    NmodesΨ = size(ijklΨ,1)
+    NmodesΦ = size(ijklΦ,1)
+    # input is sum_n x[n] Ψ[n], want to reexpress as sum_n y[n] Φ[n]
+    # where Φ is superset of Ψ. (If Φ is subset of Ψ, drop missing modes.)
+    # n is index into basis Ψ, m is index into basis Φ
+    # n2m maps n in m s.t. ijklΦ[n2m[n]] = ijklΨ[n] and y[n2m[n]] = x[n]
+    n2m = basis_index_dict(ijklΨ, ijklΦ) 
+    y = zeros(NmodesΦ)
+    for n in 1:NmodesΨ
+        if haskey(n2m, n)
+            y[n2m[n]] = x[n]
+        end
+    end
+    y
+end
+
+
 # ====================================================================================
 # functions for generating symmetric basis sets and ODE models
 

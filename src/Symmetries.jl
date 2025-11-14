@@ -60,3 +60,18 @@ function symmetric(ijkl::Vector{Int}, σ::Vector{Symmetry})
 end
 
 
+"""
+     halfbox_symmetries()
+
+return halfbox symmetry generators sx, sy, sz, tx, tz
+"""
+function halfbox_symmetries()
+    sx = Symmetry(-1, 1, 1)
+    sy = Symmetry(1, -1, 1)
+    sz = Symmetry(1, 1, -1)
+    tx = Symmetry(1, 1, 1, 0.5, 0.0)
+    tz = Symmetry(1, 1, 1, 0.0, 0.5)
+    sx, sy, sz, tx, tz
+end
+
+
