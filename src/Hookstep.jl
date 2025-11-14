@@ -117,7 +117,7 @@ function hookstepsolve(
     xguess::AbstractVector{T},
     params = SearchParams()
 ) where {T<:Real}
-    return hookstepsolve(model.f, model.Df, xguess, params)
+    return hookstepsolve(x -> model.f(x, params.R), x -> model.Df(x, params.R), xguess, params) 
 end
 
 
