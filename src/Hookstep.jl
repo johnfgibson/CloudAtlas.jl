@@ -4,7 +4,6 @@ function printflush(string)
 end
 
 Base.@kwdef struct SearchParams{T<:Real}
-    R::T=250.0
     ftol::T=1e-08 
     xtol::T=1e-08 
     δ::T=0.02
@@ -93,47 +92,19 @@ function Df_finitediff(f,x; eps=1e-06)
     Df
 end
 
-"""
-    hookstepsolve(model::ODEModel, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0) :
-
-Solve f(x) = 0 for x using Newton-hookstep algorithm using finite-difference estimate of Df
-f is a function f(x)
-xguess is the initial guess for the solution
-
-optional named arguments:
-  δ is the initial trust-region radius
-  Nnewton is the maximum number of Newton steps
-  Nhook is the maximum number of hooksteps per Newton step
-  Nmusearch is the maximum number of iterations to find a hookstep with length equal to δ
-  verbosity == 0,1,2 gives none, terse, and verbose diagnostic printouts
-
-usage: 
-  x, success = hookstep(f,Df, δ=0.2, Nnewton=8)   # example with two named arguments
-
-return value x is the solution, success is a boolean flag indicating success (convergence) or failure (local minimum)
-"""
-function hookstepsolve(
-    model::ODEModel,
-    xguess::AbstractVector{T},
-    params = SearchParams()
-) where {T<:Real}
-    return hookstepsolve(x -> model.f(x, params.R), x -> model.Df(x, params.R), xguess, params) 
-end
-
-
 hookstepsolve(f, xguess, params = SearchParams()) = hookstepsolve(f, x -> Df_finitediff(f,x), xguess, params)
 
 """
-hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0) :
+    hookstepsolve(f, Df, xguess; δ=0.1, Nnewton=20, Nhook=4, Nmusearch=6, verbosity=0) :
 
-    Solve f(x) = 0 for x using Newton-hookstep algorithm with user-suppplied derivative Df
-    f and Df are functions f(x), Df(x). Df supplies the derivative of f evaluated at x (Df = [df_i/dx_j]). 
-    xguess is the initial guess for the solution
-    δ is the initial trust-region radius
-    Nnewton is the maximum number of Newton steps
-    Nhook is the maximum number of hooksteps per Newton step
-    Nmusearch is the maximum number of iterations to find a hookstep with length equal to δ
-    verbosity == 0,1,2 gives none, terse, and verbose diagnostic printouts
+Solve f(x) = 0 for x using Newton-hookstep algorithm with user-suppplied derivative Df
+f and Df are functions f(x), Df(x). Df supplies the derivative of f evaluated at x (Df = [df_i/dx_j]). 
+xguess is the initial guess for the solution
+δ is the initial trust-region radius
+Nnewton is the maximum number of Newton steps
+Nhook is the maximum number of hooksteps per Newton step
+Nmusearch is the maximum number of iterations to find a hookstep with length equal to δ
+verbosity == 0,1,2 gives none, terse, and verbose diagnostic printouts
 """
 function hookstepsolve(
     f, 
@@ -154,7 +125,6 @@ function hookstepsolve(
     Xiterates[1,:] = x
     
     verbosity = params.verbosity
-    R = params.R
     ftol = params.ftol
     xtol = params.xtol
     Nhook = params.Nhook

@@ -925,7 +925,8 @@ function save(x::Vector, filebase)
     close(io)
 end
 
-    
+
+#=======================================
 """
     shear(x) = shearFunction(Ψ)
 
@@ -944,7 +945,7 @@ function shearFunction(Ψ::AbstractVector{BasisFunction{T}}) where {T<:Real}
     end
     shear(x) = dot(shearΨ, x) + 1.0
 end
-
+======================================#
 
 """
     basis_index_dict(ijklΨ, ijklΦ)

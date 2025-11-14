@@ -29,8 +29,9 @@ tz = Symmetry(1, 1, 1, 0//1, 1//2)
     @time @testset "ODEModel evaluation on known equilibrium" begin
 
         # set up ODE model for some tests
-        α, γ = 1.0, 2.0                     # Fourier wavenumbers α, γ = 2π/Lx, 2π/Lz
-        J,K,L = 1,1,3                       # Bounds on Fourier modes (J,K) and wall-normal polynomials (L)
+        α, γ = 1.0, 2.0             # Fourier wavenumbers α, γ = 2π/Lx, 2π/Lz
+        H = [sx*sy*sz, sz*tx*tz]    # Generators of the symmetric subspace of the Nagata eqb
+        J,K,L = 1,1,3               # Bounds on Fourier modes (J,K) and wall-normal polynomials (L)
         R = 200.0
         
         # ODE eqb version of Nagata lower branch, computed for PRL
@@ -40,28 +41,19 @@ tz = Symmetry(1, 1, 1, 0//1, 1//2)
                 -0.04609045287990289, -0.03157916691896989, 0.0010374375712356061, 0.01601957685174594,
                  0.07702704667134751]
         
-        H = [sx * sy * sz, sz * tx * tz]  # Generators of the symmetric subspace of the Nagata eqb
+        model = ODEModel(α, γ, J, K, L, H)  # Form ODE model via Galerkin projection
 
-        ijkl = basisIndices(J, K, L, H)   # Compute index set of H-symmetric basis elements Ψijkl
-        Ψ = basisSet(α, γ, ijkl)          # Compute basis elements Ψijkl in the index set
-        model = ODEModel(Ψ)               # Do Galerkin projection, return f(x,R) for ODE dx/dt = f(x,R)
-        
         @test norm(model.f(xeqb, R))/norm(xeqb) < 1e-10
         
     end
 
     @time @testset "Hookstep Solve" begin
-        α, γ = 1.0, 2.0                     # Fourier wavenumbers α, γ = 2π/Lx, 2π/Lz
-        J,K,L = 1,1,3                       # Bounds on Fourier modes (J,K) and wall-normal polynomials (L)
-        guessNorm = 0.2
-        R = 200.0
+        α, γ = 1.0, 2.0             # Fourier wavenumbers α, γ = 2π/Lx, 2π/Lz
+        H = [sx*sy*sz, sz*tx*tz]    # Generators of the symmetric subspace of the Nagata eqb
+        J,K,L = 1,1,3               # Bounds on Fourier modes (J,K) and wall-normal polynomials (L)
+        R = 200.0                   # Reynolds number
 
-        H = [sx * sy * sz, sz * tx * tz]    # Generators of the symmetric subspace of the Nagata eqb
-
-        ijkl = basisIndices(J, K, L, H)     # Compute index set of H-symmetric basis elements Ψijkl
-        Ψ = basisSet(α, γ, ijkl)            # Compute basis elements Ψijkl in the index set
-        model = ODEModel(Ψ)                 # Do Galerkin projection, return f(x,R) for ODE dx/dt = f(x,R)
-        Nmodes = length(Ψ)
+        model = ODEModel(α, γ, J, K, L, H)  # Form ODE model via Galerkin projection
 
         # Projection of Nagata eqb used as initial guess for ODE eqb. Computed for PRL
         xguess = [0.105, -0.0539, 0.388, -0.0172, -0.0133, 0.0113, -0.00706, 0.0240, -0.0344, -0.00868,
@@ -72,25 +64,21 @@ tz = Symmetry(1, 1, 1, 0//1, 1//2)
                 -0.04609045287990289, -0.03157916691896989, 0.0010374375712356061, 0.01601957685174594,
                  0.07702704667134751]
 
-        fr = x -> model.f(x,R)
-        Dfr = x -> model.Df(x,R)
-        xsoln, success = hookstepsolve(fr, Dfr, xguess)
+        f = x -> model.f(x,R)
+        Df = x -> model.Df(x,R)
+        xsoln, success = hookstepsolve(f, Df, xguess)
         @test norm(xsoln - xeqb)/norm(xeqb) < 1e-08
     end
 
     @time @testset "Hookstep Solve with ODEModel and SearchParams" begin
-        α, γ = 1.0, 2.0                     # Fourier wavenumbers α, γ = 2π/Lx, 2π/Lz
-        J,K,L = 1,1,3                       # Bounds on Fourier modes (J,K) and wall-normal polynomials (L)
-
-        params = SearchParams(; R = 200.0)
-
-        H = [sx * sy * sz, sz * tx * tz]    # Generators of the symmetric subspace of the Nagata eqb
-
-        ijkl = basisIndices(J, K, L, H)     # Compute index set of H-symmetric basis elements Ψijkl
-        Ψ = basisSet(α, γ, ijkl)            # Compute basis elements Ψijkl in the index set
-        model = ODEModel(Ψ)                 # Do Galerkin projection, return f(x,R) for ODE dx/dt = f(x,R)
-        Nmodes = length(Ψ)
-
+        α, γ = 1.0, 2.0             # Fourier wavenumbers α, γ = 2π/Lx, 2π/Lz
+        H = [sx*sy*sz, sz*tx*tz]    # Generators of the symmetric subspace of the Nagata eqb
+        J,K,L = 1,1,3               # Bounds on Fourier modes (J,K) and wall-normal polynomials (L)
+        R = 200.0                   # Reynolds number
+        
+        model = ODEModel(α, γ, J, K, L, H)  # Form ODE model via Galerkin projection
+        params = SearchParams(; δ=0.01)
+        
         # Projection of Nagata eqb used as initial guess for ODE eqb. Computed for PRL
         xguess = [0.105, -0.0539, 0.388, -0.0172, -0.0133, 0.0113, -0.00706, 0.0240, -0.0344, -0.00868,
                   -0.01264, -0.0234, -0.0320, -0.0180, -0.00464, 0.0106, 0.0235]
@@ -100,7 +88,9 @@ tz = Symmetry(1, 1, 1, 0//1, 1//2)
                 -0.04609045287990289, -0.03157916691896989, 0.0010374375712356061, 0.01601957685174594,
                  0.07702704667134751]
 
-        xsoln, success = hookstepsolve(model, xguess, params)
+        f = x -> model.f(x,R)
+        Df = x -> model.Df(x,R)
+        xsoln, success = hookstepsolve(f, Df, xguess, params)
         @test norm(xsoln - xeqb)/norm(xeqb) < 1e-08
     end
 end
