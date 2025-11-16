@@ -1,8 +1,8 @@
 using Test
-
-using CloudAtlas
 using Polynomials
 using LinearAlgebra
+
+using CloudAtlas
 
 sx = Symmetry(-1, 1, 1)
 sy = Symmetry(1, -1, 1)
@@ -24,6 +24,18 @@ tz = Symmetry(1, 1, 1, 0//1, 1//2)
         f = FourierMode(1, 1, 1)
         b = BasisComponent(1, f, f, Polynomial([1, 0, -1], :y), 0)
         @test compatible(b, b)
+    end
+
+    @time @testset "Hookstep search on simple 2d function " begin
+        f(x) = [x[1]^2 + x[2]^2 - 1; x[1] - x[2]]
+        Df(x) = [2x[1] 2x[2] ; 1 -1]
+        
+        xguess = [2; 0]
+        xsolution = [1/sqrt(2); 1/sqrt(2)]
+        xsolve, success = hookstepsolve(f, Df, xguess)
+        @show xsolve
+
+        @test norm(xsolve-xsolution) < 1e-10
     end
 
     @time @testset "ODEModel evaluation on known equilibrium" begin
