@@ -869,9 +869,6 @@ function loworder(ijkl::Vector{Int}, JKL::Vector{Int})
     return abs(j) <= J && abs(k) <= K && 0 <= l <= L
 end   
 
-foo() = "foo!"
-
-
 xreflection(ijkl::Matrix{Int}) =  [xreflection(ijkl[n,:]) for n=1:size(ijkl,1)]
 yreflection(ijkl::Matrix{Int}) =  [yreflection(ijkl[n,:]) for n=1:size(ijkl,1)]
 zreflection(ijkl::Matrix{Int}) =  [zreflection(ijkl[n,:]) for n=1:size(ijkl,1)]
@@ -879,23 +876,12 @@ xtranslationLx2(ijkl::Matrix{Int}) =  [xtranslationLx2(ijkl[n,:]) for n=1:size(i
 ztranslationLz2(ijkl::Matrix{Int}) =  [ztranslationLz2(ijkl[n,:]) for n=1:size(ijkl,1)]
 loworder(ijkl::Matrix{Int}, JKL::Vector{Int}) = [loworder(ijkl[n,:], JKL) for n=1:size(ijkl,1)]
 
-# TODO: This is "type piracy" and should be revised
-# (https://docs.julialang.org/en/v1/manual/style-guide/#avoid-type-piracy)
-#intersect(u::Vector, v::Vector) = sort(collect(intersect(Set(u), Set(v))))
-#intersect(u::Vector, v::Vector, w::Vector) = sort(collect(intersect(Set(u), Set(v), Set(w))))
-#intersect(u::Vector, v::Vector, w::Vector, x::Vector) = sort(collect(intersect(Set(u), Set(v), Set(w), Set(x))))
-
-#findsymmetric(h) = findall(x -> x==1, h) # select indices n s.t. h psi[n] = 1 psi[n]
-#findsymmetric(h1, h2) = intersect(findsymmetric(h1), findsymmetric(h2))
-#findsymmetric(h1, h2, h3) = intersect(findsymmetric(h1), findsymmetric(h2), findsymmetric(h3))
-#findsymmetric(h1, h2, h3, h4) = intersect(findsymmetric(h1), findsymmetric(h2), findsymmetric(h3), findsymmetric(h4))
-
-function ijkl2file(ijkl, filebase)
+function ijkl2file(ijkl, filebase; comment_char='#')
     filename = occursin(".asc", filebase) ? filebase : filebase * ".asc"
     io = open(filename, "w")
     M, N = size(ijkl)
     N == 4 || error("ijkl matrix should have 4 cols, but it has N=$N")
-    println(io, "% $M")
+    println(io, "$comment_char $M")
     for n=1:M
         #i,j,k,l = ijkl[n,:]
         println(io, "$(ijkl[n,1]) $(ijkl[n,2]) $(ijkl[n,3]) $(ijkl[n,4])")
@@ -903,22 +889,22 @@ function ijkl2file(ijkl, filebase)
     close(io)
 end
 
-function save(A::Matrix, filebase)
+function save(A::Matrix, filebase; comment_char='#')
     filename = occursin(".asc", filebase) ? filebase : filebase * ".asc"
     io = open(filename, "w")
     M,N = size(A)
-    println(io, "% $M $N")
+    println(io, "$comment_char $M $N")
     for i=1:M, j=1:N
         print(io, A[i,j], j<N ? ' ' : '\n')
     end
     close(io)
 end
 
-function save(x::Vector, filebase)
+function save(x::Vector, filebase; comment_char='#')
     filename = occursin(".asc", filebase) ? filebase : filebase * ".asc"
     io = open(filename, "w")
     N = length(x)
-    println(io, "% $N")
+    println(io, "$comment_char $N")
     for i=1:N
         print(io, x[i], '\n')
     end
