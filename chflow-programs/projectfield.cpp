@@ -28,14 +28,14 @@ int main(int argc, char* argv[]) {
         //const Real   umagn    = args.getreal("-m", "--magnitude", 0.0, "nonzero => rescale u to have this magnitude");
         //const string symmname = args.getstr(3, "<symmetries>", "symmetry group filename");
 
-        const bool normalize  = args.getflag("-nrm", "--normalize", "normalize basis elements");
+	const string xfilename = args.getstr("-x", "--xfilename", "", "build u = sum psi_n x_n using x from file");
+	const string Afilename = args.getstr("-A", "--Afilename", "", "load inner product matrix from file");	
+	const bool unnormalized = args.getflag("-un", "--unnormalized", "don't normalize basis elements");
         const bool savebasis  = args.getflag("-sb", "--savebasis", "output basis elements as flowfields");
         const bool saveIP     = args.getflag("-sIP", "--saveIPmat", "output the inner product matrix");	
         const bool plotbasis  = args.getflag("-pb", "--plotbasis", "save slices of basis elements for plotting");
         const bool printnorms = args.getflag("-pn", "--printnorms", "print L2Norm(psi[n]), L2Norm(div(u)), etc.");
         const string plotdir  = args.getstr("-o", "--plotdir", "plots/",  "directory for basis plots");
-	const string xfilename = args.getstr("-x", "--xfilename", "", "build u = sum psi_n x_n using x from file");
-	const string Afilename = args.getstr("-A", "--Afilename", "", "load inner product matrix from file");	
 	const string commstr  = args.getstr("-cc", "--comment-character", "#", "comment character for datafiles, # or %");
 	const string ijklname = args.getstr(3, "<ijklfile>", "filename for ijkl indices of basis functions");
 	const string uinname  = args.getstr(2, "<infield>", "input field filename (fully-resolved u to be projected)");	

@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) { cfMPI_Init(&argc, &argv); {
   //const string Uname   = args.getstr("-U", "--Ubase", "", "base flow, one of [zero|linear|parabolic|<filename>]");
   //const bool stddev    = args.getflag("-sd",  "--stddev",  "compute std dev <|u-<u>|^2>^(1/2)");
   /***/ int digits     = args.getint ("-dg", "--digits",  8,  "# digits in output");
-  const bool normalize  = args.getflag("-nrm", "--normalize", "normalize basis elements");
+  const bool unnormalized = args.getflag("-un", "--unnormalized", "don't normalize basis elements");
   const string commstr  = args.getstr("-cc", "--comment-character", "#", "comment character for datafiles, # or %");
 
   const string ijklname = args.getstr(2, "<ijklfile>", "filename for ijkl indices of basis functions");
