@@ -32,7 +32,9 @@ int main(int argc, char* argv[]) { cfMPI_Init(&argc, &argv); {
   //const string Uname   = args.getstr("-U", "--Ubase", "", "base flow, one of [zero|linear|parabolic|<filename>]");
   //const bool stddev    = args.getflag("-sd",  "--stddev",  "compute std dev <|u-<u>|^2>^(1/2)");
   /***/ int digits     = args.getint ("-dg", "--digits",  8,  "# digits in output");
-  const bool normalize  = args.getflag("-nrm", "--normalize", "normalize basis elements");
+  const bool unnormalized = args.getflag("-un", "--unnormalized", "don't normalize basis elements");
+  const string commstr  = args.getstr("-cc", "--comment-character", "#", "comment character for datafiles, # or %");
+
   const string ijklname = args.getstr(2, "<ijklfile>", "filename for ijkl indices of basis functions");
   const string outlabel = args.getstr(1, "<outlabel>",  "filename stub for outputs e.g. foo, produces xfoo.nc and tfoo.asc");
   
@@ -40,6 +42,9 @@ int main(int argc, char* argv[]) { cfMPI_Init(&argc, &argv); {
   args.save("./");
 
   const char s = ' ';
+  char commchar = '#';
+  if (commstr == "%" || commstr == "percent")
+      commchar = '%';
 
   if (adjustdT) {
     // Use timestep dt simply to adjust dT to evenly fit (T1-T0)
@@ -72,7 +77,7 @@ int main(int argc, char* argv[]) { cfMPI_Init(&argc, &argv); {
   cout << "Nx, Ny, Nz == " << Nx << ", " << Ny << ", "<< Nz << endl;
 
   cout << "Reading ijkl indices of basis set from file" << endl;
-  MatrixXi ijkl = readijkl(ijklname);
+  MatrixXi ijkl = readijkl(ijklname, commchar);
   cout << "ijkl[0] == " << ijkl(0,0) << ' ' << ijkl(0,1) << ' ' << ijkl(0,2) << ' ' << ijkl(0,3) << endl;
 
   // Figure out the largest value of L in index set
