@@ -1,5 +1,20 @@
 #include "basisfunctions.h"
 
+// rational approx to sqrt(n)
+Real ratsqrt(int n) {
+    int r = int(round(sqrt(n)));     // r =  int nearest sqrt of n
+    Real fr = Real(r);           // fr = float rep of int nearest sqrt n
+    if (r*r == n)
+      return fr;
+    return 0.5*(fr + n/fr);
+}
+
+// a rational normalizer for polynomial S[n]
+Real Snormalizer(int n) {
+    if (n == 0)
+      return 0.5;
+    return 0.5/ratsqrt(n);
+}
 
 Real E(int j, Real ax) {
     Real Ejax = 1.0;
@@ -16,32 +31,37 @@ Real E(int j, Real ax) {
 Real Psi(int i, int j, int k, int l, int m, Real x, Real y, Real z, Real alpha, Real gamma) { 
     Real rtn = 0.0;
 
-    if (i==1 && m == 0)
+    if (i == 1 && m == 0)
 	rtn = E(k, gamma*z) * Sprime[l](y);
 
-    else if (i==2 && m == 1)
+    else if (i == 2 && m == 1)
 	rtn = gamma*k* E(k, gamma*z) * S[l](y);
-    else if (i==2 && m == 2)
+
+    else if (i == 2 && m == 2)
 	rtn = E(-k, gamma*z) * Sprime[l](y);
-    
-    else if (i==3 && m == 2)
+
+    else if (i == 3 && m == 2)
 	rtn = E(j, alpha*x) * Sprime[l](y);
-    
-    else if (i==4 && m == 0)
+
+    else if (i == 4 && m == 0)
 	rtn =  E(-j, alpha*x) * Sprime[l](y);
-    else if (i==4 && m == 1)
+
+    else if (i == 4 && m == 1)
 	rtn =  alpha*j * E(j, alpha*x) * S[l](y);
-    
-    else if (i==5 && m == 0)
+
+    else if (i == 5 && m == 0)
 	rtn =  gamma*k * E(-j, alpha*x) * E(k, gamma*z) * Sprime[l](y);
-    else if (i==5 && m == 2)
+
+    else if (i == 5 && m == 2)
 	rtn = -alpha*j * E(j, alpha*x) * E(-k, gamma*z) * Sprime[l](y);
 
-    else if (i==6 && m == 0)
+    else if (i == 6 && m == 0)
 	rtn = gamma*k * E(-j, alpha*x) * E(k, gamma*z) * Sprime[l](y);
-    else if (i==6 && m == 1)
+
+    else if (i == 6 && m == 1)
 	rtn = 2*alpha*gamma*j*k * E(j, alpha*x) * E(k, gamma*z) * S[l](y);
-    else if (i==6 && m == 2)
+
+    else if (i == 6 && m == 2)
 	rtn = alpha*j * E(j, alpha*x) * E(-k, gamma*z) * Sprime[l](y);
 
     return rtn;

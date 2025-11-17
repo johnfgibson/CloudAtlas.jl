@@ -22,7 +22,6 @@ function polyparity(p::Polynomial)
     parity
 end
 
-
 """
     FourierMode{T<:Real}
 
@@ -591,6 +590,35 @@ legendrePolynomials(L, symbol=:y) = legendrePolynomials(T_ELEMENT, L, symbol)
 
 
 """
+    ratsqrt(n::Int)
+
+Return a rational approximation to sqrt(n). Useful for normalizing 
+rational-coeff polynomials while staying rational, not converting to float.
+"""
+function ratsqrt(n::Int)
+    r = Int(round(sqrt(n)))
+    if r^2 == n
+        return r
+    end
+    r = 1//2 * (r + n//r)
+end
+
+"""
+    Snormalizer(n)
+
+For functions Sn(y) = (1-y^2)^2 P_{n-1}(y), n >= 1, and S0(y) = (1-y^2)y,
+norm(Sn) ~ 1/sqrt(n) and norm(Sn') ~ sqrt(n). Snormalizer is a rational-valued
+function that scales as Snormalizer(n) ~ 1/sqrt(n), so that 
+norm(Sn/Snormalizer(n)) ~ 1 and norm(Sn'/Snormalizer(n)) ~ n.
+"""
+function Snormalizer(n)
+    n == 0 && return 1//2
+    return 1//2 / ratsqrt(n)
+end
+
+min1(n) = n < 1 ? 1 : n
+
+"""
 make a set of basis functions Ψijkl, return as an array of BasisFunctions
    α,γ == Fourier wavenumbers 2π/Lx, 2π/Lz, 
    basis functions are all zero divergence, div Psi = 0, and zero at walls, Psi(x,±1,z) = 0.
@@ -618,32 +646,47 @@ function basisSet(α::T, γ::T, ijkl::Matrix{Int}; normalize=false) where {T<:Re
     zeropoly = Polynomial(zero(T), :y)
     zerocomp = BasisComponent(0, zeroEjx, zeroEkz, zeropoly, 0)
 
+    # Note: the normalizer constants commented out below are an attempt to do
+    # approximate normalization of rational BasisFunctions.
     Ψ = fill(BasisFunction(), N)
     for n=1:N
         i,j,k,l = ijkl[n,:]
-        if i==1
-            Ψu = BasisComponent(1, Ejx[0], Ekz[k], Sprime[l], parity(l))
+        normalizer = one(T)
+        if i == 1       # j=0
+            #normalizer = normalize ? T(min1(l)*Snormalizer(l)) : one(T)
+            Ψu = BasisComponent(one(T), Ejx[0], Ekz[k], Sprime[l], parity(l))
             Ψ[n] = BasisFunction(Ψu, zerocomp, zerocomp)
-        elseif i==2
+
+        elseif i == 2   # j=0, k≠0, l≠0
+            #normalizer = normalize ? T((γ*abs(k) + min1(l))*Snormalizer(l)) : one(T)
             Ψv = BasisComponent(γ*k, Ejx[0], Ekz[k], S[l], parity(l+1))
-            Ψw = BasisComponent(1,   Ejx[0], Ekz[-k], Sprime[l], parity(l))
+            Ψw = BasisComponent(one(T),   Ejx[0], Ekz[-k], Sprime[l], parity(l))
             Ψ[n] = BasisFunction(zerocomp, Ψv, Ψw)
-        elseif i==3
-            Ψw = BasisComponent(1, Ejx[j], Ekz[0], Sprime[l], parity(l))
+
+        elseif i == 3   # k=0
+            #normalizer = normalize ? T(min1(l)*Snormalizer(l)) : one(T)
+            Ψw = BasisComponent(one(T), Ejx[j], Ekz[0], Sprime[l], parity(l))
             Ψ[n] = BasisFunction(zerocomp, zerocomp, Ψw)
-        elseif i==4
-            Ψu = BasisComponent(1, Ejx[-j], Ekz[0], Sprime[l], parity(l))
+
+        elseif i == 4   # j≠0, k=0, l≠0
+            #normalizer = normalize ? T((l + α*abs(j))*Snormalizer(l)) : one(T)
+            Ψu = BasisComponent(one(T), Ejx[-j], Ekz[0], Sprime[l], parity(l))
             Ψv = BasisComponent(α*j, Ejx[j], Ekz[0], S[l], parity(l+1))
             Ψ[n] = BasisFunction(Ψu, Ψv, zerocomp)
-        elseif i==5
+
+        elseif i == 5   # j≠0, k≠0
+            #normalizer = normalize ? T((α*abs(j) + γ*abs(k))*min1(l)*Snormalizer(l)) : one(T)
             Ψu = BasisComponent( γ*k, Ejx[-j], Ekz[k], Sprime[l], parity(l)) 
             Ψw = BasisComponent(-α*j, Ejx[j], Ekz[-k], Sprime[l], parity(l))
             Ψ[n] = BasisFunction(Ψu, zerocomp, Ψw)
-        elseif i==6
+
+        elseif i == 6   # j≠0, k≠0, l≠0
+            #normalizer = normalize ? T((l*γ*abs(k) + 2α*γ*abs(j*k) + l*α*abs(j))*Snormalizer(l)) : one(T)
             Ψu = BasisComponent(γ*k,      Ejx[-j], Ekz[k], Sprime[l], parity(l))
             Ψv = BasisComponent(2α*γ*j*k, Ejx[j], Ekz[k], S[l], parity(l+1))                
             Ψw = BasisComponent(α*j,      Ejx[j], Ekz[-k], Sprime[l], parity(l))
             Ψ[n] = BasisFunction(Ψu, Ψv, Ψw)
+
         else
             println("oops! logic error, execution shouldn't get here; i==$(i)")
             Ψ[n] = BasisFunction(zerocomp, zerocomp, zerocomp)

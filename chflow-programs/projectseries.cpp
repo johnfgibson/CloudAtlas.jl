@@ -71,6 +71,7 @@ int main(int argc, char* argv[]) { cfMPI_Init(&argc, &argv); {
   const Real ub = u0.b();
   const Real alpha = 2*pi/Lx;
   const Real gamma = 2*pi/Lz;
+  const bool normalize = !unnormalized;
 
   cout << setprecision(16);
   cout << "alpha, gamma == " << alpha << ", " << gamma << endl;

@@ -19,13 +19,13 @@ struct ODEModel{T<:Real, TB, TF, TDF}
     Df::TDF                      # Df(x,R), the derivative of f, [Df]_ij = df_i/dx_j
 end
 
-function ODEModel(α::T, γ::T, J::Int, K::Int, L::Int, H::Vector{Symmetry}) where T<:Real
+function ODEModel(α::T, γ::T, J::Int, K::Int, L::Int, H::Vector{Symmetry}; normalize=false) where T<:Real
     ijkl = basisIndices(J,K,L,H)    # Compute set of allowed ijkl for H-symmetric Ψijkl 
     m = size(ijkl,1)                # State space dimension
     println("J,K,L,m == $J,$K,$L,$m")
     println("(2J+1)(2K+1)(2L+1) + 1 == $((2J+1)*(2K+1)*(2L+1) + 1)")
         
-    Ψ = basisSet(α, γ, ijkl)        # Construct basis set 
+    Ψ = basisSet(α, γ, ijkl, normalize=normalize)  # Construct basis set 
     Ψshear = zeros(T, m)
     for i=1:m
         if Ψ[i].u[1].ejx.waveindex == 0 && Ψ[i].u[1].ekz.waveindex == 0

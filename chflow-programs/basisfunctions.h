@@ -22,6 +22,13 @@ cfarray<Polynomial> P;
 cfarray<Polynomial> S;
 cfarray<Polynomial> Sprime;
 
+// rational approx to sqrt(n)
+Real ratsqrt(int n);
+
+// a rational normalizer for polynomial S[n]
+Real Snormalizer(int n);
+
+// real-valued Fourier mode: E(j,ax) = cos(ajx), 1, sin(ajx) for j < 0, j ==0, j > 0
 Real E(int j, Real ax);
     
 // return mth component of Psi_{ijkl} at (x,y,z), i.e. (Psi{ijkl}_m)(x,y,z)
