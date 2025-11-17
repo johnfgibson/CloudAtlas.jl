@@ -31,4 +31,9 @@ include("Hookstep.jl")
 
 export hookstepsolve, SearchParams
 
+include("Channelflow.jl")
+using .Channelflow
+
+export projectfield, field_to_coeff, coeff_to_field, changegrid, findsoln, continuesoln
+
 end # module CloudAtlas
