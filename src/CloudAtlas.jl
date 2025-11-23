@@ -35,4 +35,29 @@ include("TWModels.jl")
 
 export TWModel, has_shift_symmetry, save_sigma
 
+# Visualization functions - these are only available when CairoMakie is loaded
+# The actual implementations are in ext/CloudAtlasVisualizationExt.jl
+
+# Note: we define PlotSettings here, because extensions cannot nicely export strutures.
+"""
+    PlotSettings
+
+Configuration for velocity field plots.
+"""
+Base.@kwdef struct PlotSettings
+    num_points::Int = 30
+    arrow_scale::Float64 = 0.5
+    arrow_lengthscale::Float64 = 0.8
+    arrow_tiplength::Float64 = 14.0   # Values in pixels 
+    arrow_tipwidth::Float64 = 14.0    # Values in pixels
+    arrow_shaftwidth::Float64 = 2.0   # Value in pixels
+    colormap::Vector{Symbol} = [:navyblue, :aqua, :lime, :orange, :red4]
+    fig_size::Tuple{Int,Int} = (900, 1200)
+end
+
+function velocity_fields end
+function velocity_fields_dns end
+function velocity_fields_comparison end
+export velocity_fields, velocity_fields_dns, velocity_fields_comparison, PlotSettings
+
 end # module CloudAtlas
