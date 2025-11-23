@@ -31,4 +31,8 @@ include("Hookstep.jl")
 
 export hookstepsolve, SearchParams
 
+include("TWModels.jl")
+
+export TWModel, has_shift_symmetry, save_sigma
+
 end # module CloudAtlas
