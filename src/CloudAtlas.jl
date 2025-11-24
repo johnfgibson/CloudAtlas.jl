@@ -33,6 +33,6 @@ export hookstepsolve, SearchParams
 
 include("TWModels.jl")
 
-export TWModel, has_shift_symmetry, save_sigma
+export TWModel, save_sigma
 
 end # module CloudAtlas
