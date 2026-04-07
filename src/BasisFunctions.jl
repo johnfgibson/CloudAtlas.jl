@@ -7,7 +7,9 @@
 # divide(x::AbstractFloat, y::AbstractFloat) = x/y
 # divide(x::AbstractFloat, y::AbstractFloat) = x/y
 
-const T_ELEMENT = Float64
+#const T_ELEMENT = Float64
+#const T_ELEMENT = Rational{BigInt}
+#const T_ELEMENT = Rational{Int64}
 
 parity(k) = k%2 == 0 ? 1 : -1    # 1 for k even, -1 for k odd
 square(x) = x*x
@@ -60,7 +62,7 @@ end
 # zero(ej::FourierMode) = FourierMode(0, 0, ej.wavenumber)
 
 FourierMode{T}() where {T<:Real} = FourierMode(zero(T),0,zero(T))
-FourierMode() = FourierMode{T_ELEMENT}()
+#FourierMode() = FourierMode{T_ELEMENT}()
 FourierMode(j, α) = FourierMode(one(α),j,α)
 
 function (f::FourierMode)(x::Real) 
@@ -250,7 +252,7 @@ struct BasisComponent{T<:Real}
 end
 
 BasisComponent{T}() where {T<:Real} = BasisComponent(zero(T), FourierMode{T}(), FourierMode{T}(), Polynomial(zero(T), :y), 0) 
-BasisComponent() = BasisComponent{T_ELEMENT}()
+#BasisComponent() = BasisComponent{T_ELEMENT}()
 
 (f::BasisComponent)(x::Real, y::Real, z::Real) = f.coeff * f.ejx(x) * f.ekz(z) * f.p(y)
 (f::BasisComponent)(x::Vector) = f.coeff * f.ejx(x[1]) * f.ekz(x[3]) * f.p(x[2])
@@ -342,7 +344,8 @@ function *(f::BasisComponent, g::BasisComponent)
     N = length(fgekz)
 
     # Allocate and fill an array of BasisComponents to store up to four terms of form c ej(x) ek(z) p(y)
-    rtn = fill(BasisComponent(), M*N)
+    T = typeof(f.coeff)
+    rtn = fill(BasisComponent{T}(), M*N)
 
     k = 1
     for m=1:M, n=1:N
@@ -377,7 +380,7 @@ struct BasisFunction{T<:Real}
 end
 
 BasisFunction{T}() where {T<:Real} = BasisFunction(SVector(BasisComponent{T}(), BasisComponent{T}(), BasisComponent{T}()))
-BasisFunction() = BasisFunction{T_ELEMENT}()
+#BasisFunction() = BasisFunction{T_ELEMENT}()
 
 BasisFunction(u::BasisComponent, v::BasisComponent, w::BasisComponent) = BasisFunction(SVector(u, v, w))
 
@@ -576,17 +579,17 @@ return OffSetArray of Legendre polynomials P_n(y) for n=0 to K
 """
 function legendrePolynomials(T::Type, L::Int, symbol=:y)
     L >= 0 || error("invalid L value L=$(L), should be nonnegative")
-    P = OffsetVector(fill(Polynomial([zero(T)], :y), L+1), -1)
+    P = OffsetVector(fill(Polynomial{T}([zero(T)], :y), L+1), -1)
     P[0] = Polynomial{T}([1], :y)
     if L>1
         P[1] = Polynomial{T}([0, 1], :y)
     end
     for n = 2:L
-        P[n] = ((2*n-1)*P[1]*P[n-1] - (n-1)*P[n-2])/n
+        P[n] = (1//n)*((2*n-1)*P[1]*P[n-1] - (n-1)*P[n-2])
     end
     return P
 end
-legendrePolynomials(L, symbol=:y) = legendrePolynomials(T_ELEMENT, L, symbol)
+#legendrePolynomials(L, symbol=:y) = legendrePolynomials(T_ELEMENT, L, symbol)
 
 
 """
@@ -631,10 +634,10 @@ function basisSet(α::T, γ::T, ijkl::Matrix{Int}; normalize=false) where {T<:Re
     L = maximum(ijkl[:,4])
 
     smasher = Polynomial{T}([1; 0; -1], :y)  # smasher  =  1-y^2
-    smasher2 = smasher*smasher            # smasher2 = (1-y^2)^2
+    smasher2 = smasher*smasher               # smasher2 = (1-y^2)^2
     P = legendrePolynomials(T, L)            # l = 0:L, even/odd with l
 
-    S0 = Polynomial{T}([0; 1; 0; -1/3], :y)           # S0(y) = y - y^3/3
+    S0 = Polynomial{T}([0; 1; 0; -1//3], :y)       # S0(y) = y - y^3/3 (Rational will get converted if T is Float)
     S = OffsetVector([S0; smasher2.*P[0:L-1]], -1) # l = 1:L, even/odd with l+1
     Sprime = derivative.(S)                        # l = 0:L, even/odd with l
 
@@ -648,7 +651,7 @@ function basisSet(α::T, γ::T, ijkl::Matrix{Int}; normalize=false) where {T<:Re
 
     # Note: the normalizer constants commented out below are an attempt to do
     # approximate normalization of rational BasisFunctions.
-    Ψ = fill(BasisFunction(), N)
+    Ψ = fill(BasisFunction{T}(), N)
     for n=1:N
         i,j,k,l = ijkl[n,:]
         normalizer = one(T)
@@ -932,22 +935,22 @@ function ijkl2file(ijkl, filebase; comment_char='#')
     close(io)
 end
 
-function save(A::Matrix, filebase; comment_char='#')
+function save(A::Matrix, filebase; cc='#')
     filename = occursin(".asc", filebase) ? filebase : filebase * ".asc"
     io = open(filename, "w")
     M,N = size(A)
-    println(io, "$comment_char $M $N")
+    println(io, "$cc $M $N")
     for i=1:M, j=1:N
         print(io, A[i,j], j<N ? ' ' : '\n')
     end
     close(io)
 end
 
-function save(x::Vector, filebase; comment_char='#')
+function save(x::Vector, filebase; cc='#')
     filename = occursin(".asc", filebase) ? filebase : filebase * ".asc"
     io = open(filename, "w")
     N = length(x)
-    println(io, "$comment_char $N")
+    println(io, "$cc $N")
     for i=1:N
         print(io, x[i], '\n')
     end
