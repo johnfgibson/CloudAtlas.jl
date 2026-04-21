@@ -25,7 +25,7 @@ export FourierMode, BasisComponent, BasisFunction, compatible, isorthogonal, inn
 
 include("ODEModels.jl")
 
-export ODEModel, shear, length
+export ODEModel, shear_function, dissipation_function, cnab2, length
 
 include("Hookstep.jl")
 
