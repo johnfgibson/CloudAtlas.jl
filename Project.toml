@@ -12,9 +12,9 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StringBuilders = "db12335b-fddc-5e1b-b0ee-42071d21ae50"
 
 [compat]
-LinearAlgebra = "1.12.0"
+LinearAlgebra = "1.11.0"
 OffsetArrays = "1.17.0"
 Polynomials = "4.1.0"
-SparseArrays = "1.12.0"
+SparseArrays = "1.11.0"
 StaticArrays = "1.9.15"
 StringBuilders = "0.3.3"
